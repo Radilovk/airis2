@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Eye, Sparkle, Activity, FileText } from '@phosphor-icons/react'
+import { Eye, Sparkle, Activity, FileText, ClockClockwise } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 
 interface WelcomeScreenProps {
   onStart: () => void
+  onViewHistory: () => void
 }
 
-export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
+export default function WelcomeScreen({ onStart, onViewHistory }: WelcomeScreenProps) {
   const features = [
     {
       icon: Eye,
@@ -78,15 +79,26 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="text-center"
+          className="text-center space-y-4"
         >
-          <Button
-            size="lg"
-            onClick={onStart}
-            className="px-8 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
-          >
-            Започни Анализ
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              size="lg"
+              onClick={onStart}
+              className="px-8 py-6 text-lg font-semibold bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+            >
+              Започни Анализ
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={onViewHistory}
+              className="px-8 py-6 text-lg font-semibold gap-2"
+            >
+              <ClockClockwise size={20} weight="duotone" />
+              История
+            </Button>
+          </div>
           <p className="text-sm text-muted-foreground mt-4">
             Процесът отнема около 5-10 минути
           </p>

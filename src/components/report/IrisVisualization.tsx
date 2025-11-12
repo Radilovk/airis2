@@ -1,10 +1,16 @@
-import type { IrisAnalysis } from '@/types'
+import { useState } from 'react'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import type { IrisAnalysis, IrisZone } from '@/types'
 
 interface IrisVisualizationProps {
   analysis: IrisAnalysis
 }
 
 export default function IrisVisualization({ analysis }: IrisVisualizationProps) {
+  const [hoveredZone, setHoveredZone] = useState<IrisZone | null>(null)
+  const [selectedZone, setSelectedZone] = useState<IrisZone | null>(null)
+  
   const radius = 150
   const centerX = 200
   const centerY = 200
@@ -48,101 +54,195 @@ export default function IrisVisualization({ analysis }: IrisVisualizationProps) 
     ].join(' ')
   }
 
+  const getStatusBadge = (status: 'normal' | 'attention' | 'concern') => {
+    const variants = {
+      normal: { text: 'Норма', color: 'bg-green-100 text-green-800 border-green-200' },
+      attention: { text: 'Внимание', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      concern: { text: 'Притеснение', color: 'bg-red-100 text-red-800 border-red-200' }
+    }
+    const config = variants[status]
+    return (
+      <Badge className={`${config.color} border`}>
+        {config.text}
+      </Badge>
+    )
+  }
+
   return (
-    <div className="w-full flex justify-center">
-      <svg width="400" height="400" viewBox="0 0 400 400" className="max-w-full">
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={radius}
-          fill="rgba(100, 116, 139, 0.05)"
-          stroke="rgba(100, 116, 139, 0.2)"
-          strokeWidth="2"
-        />
-
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={radius * 0.4}
-          fill="none"
-          stroke="rgba(100, 116, 139, 0.15)"
-          strokeWidth="1"
-          strokeDasharray="4,4"
-        />
-
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={radius * 0.7}
-          fill="none"
-          stroke="rgba(100, 116, 139, 0.15)"
-          strokeWidth="1"
-          strokeDasharray="4,4"
-        />
-
-        {analysis.zones.map((zone) => (
-          <g key={zone.id}>
-            <path
-              d={describeArc(centerX, centerY, radius, zone.angle[0], zone.angle[1])}
-              fill={getColorForStatus(zone.status)}
-              stroke={getStrokeForStatus(zone.status)}
-              strokeWidth={zone.status === 'normal' ? 1 : 2}
-              opacity={zone.status === 'normal' ? 0.3 : 0.8}
-            />
-            {zone.status !== 'normal' && (
-              <text
-                x={polarToCartesian(centerX, centerY, radius * 0.85, (zone.angle[0] + zone.angle[1]) / 2).x}
-                y={polarToCartesian(centerX, centerY, radius * 0.85, (zone.angle[0] + zone.angle[1]) / 2).y}
-                textAnchor="middle"
-                fill="currentColor"
-                fontSize="12"
-                fontWeight="600"
-                className="pointer-events-none"
-              >
-                {zone.id}
-              </text>
-            )}
-          </g>
-        ))}
-
-        <circle
-          cx={centerX}
-          cy={centerY}
-          r={radius * 0.25}
-          fill="rgba(100, 116, 139, 0.1)"
-          stroke="rgba(100, 116, 139, 0.3)"
-          strokeWidth="1"
-        />
-
-        <text
-          x={centerX}
-          y={centerY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill="currentColor"
-          fontSize="32"
-          fontWeight="700"
-          className="font-mono"
-        >
-          {analysis.overallHealth}
-        </text>
-
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
-          const outer = polarToCartesian(centerX, centerY, radius, angle)
-          const inner = polarToCartesian(centerX, centerY, radius - 10, angle)
-          return (
-            <line
-              key={angle}
-              x1={inner.x}
-              y1={inner.y}
-              x2={outer.x}
-              y2={outer.y}
+    <div className="w-full space-y-6">
+      <div className="flex flex-col md:flex-row gap-6 items-center">
+        <div className="flex-shrink-0">
+          <svg width="400" height="400" viewBox="0 0 400 400" className="max-w-full">
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={radius}
+              fill="rgba(100, 116, 139, 0.05)"
               stroke="rgba(100, 116, 139, 0.2)"
+              strokeWidth="2"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={radius * 0.4}
+              fill="none"
+              stroke="rgba(100, 116, 139, 0.15)"
+              strokeWidth="1"
+              strokeDasharray="4,4"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={radius * 0.7}
+              fill="none"
+              stroke="rgba(100, 116, 139, 0.15)"
+              strokeWidth="1"
+              strokeDasharray="4,4"
+            />
+
+            {analysis.zones.map((zone) => (
+              <g key={zone.id}>
+                <path
+                  d={describeArc(centerX, centerY, radius, zone.angle[0], zone.angle[1])}
+                  fill={getColorForStatus(zone.status)}
+                  stroke={getStrokeForStatus(zone.status)}
+                  strokeWidth={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 3 : zone.status === 'normal' ? 1 : 2}
+                  opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 0.8}
+                  className="cursor-pointer transition-all"
+                  onMouseEnter={() => setHoveredZone(zone)}
+                  onMouseLeave={() => setHoveredZone(null)}
+                  onClick={() => setSelectedZone(zone)}
+                />
+                <text
+                  x={polarToCartesian(centerX, centerY, radius * 0.85, (zone.angle[0] + zone.angle[1]) / 2).x}
+                  y={polarToCartesian(centerX, centerY, radius * 0.85, (zone.angle[0] + zone.angle[1]) / 2).y}
+                  textAnchor="middle"
+                  fill="currentColor"
+                  fontSize="12"
+                  fontWeight="600"
+                  className="pointer-events-none"
+                  opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 1}
+                >
+                  {zone.id}
+                </text>
+              </g>
+            ))}
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={radius * 0.25}
+              fill="rgba(100, 116, 139, 0.1)"
+              stroke="rgba(100, 116, 139, 0.3)"
               strokeWidth="1"
             />
-          )
-        })}
-      </svg>
+
+            <text
+              x={centerX}
+              y={centerY}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="currentColor"
+              fontSize="32"
+              fontWeight="700"
+              className="font-mono"
+            >
+              {analysis.overallHealth}
+            </text>
+
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
+              const outer = polarToCartesian(centerX, centerY, radius, angle)
+              const inner = polarToCartesian(centerX, centerY, radius - 10, angle)
+              return (
+                <line
+                  key={angle}
+                  x1={inner.x}
+                  y1={inner.y}
+                  x2={outer.x}
+                  y2={outer.y}
+                  stroke="rgba(100, 116, 139, 0.2)"
+                  strokeWidth="1"
+                />
+              )
+            })}
+          </svg>
+          <div className="text-center mt-4 text-sm text-muted-foreground">
+            Кликнете на зона за детайли
+          </div>
+        </div>
+
+        <div className="flex-1 w-full">
+          {selectedZone ? (
+            <Card className="p-6 bg-muted/30">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold mb-1">{selectedZone.name}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">{selectedZone.organ}</p>
+                  </div>
+                  {getStatusBadge(selectedZone.status)}
+                </div>
+                <div className="text-sm leading-relaxed">
+                  {selectedZone.findings}
+                </div>
+                <button
+                  onClick={() => setSelectedZone(null)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Затвори
+                </button>
+              </div>
+            </Card>
+          ) : hoveredZone ? (
+            <Card className="p-6 bg-muted/30">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold mb-1">{hoveredZone.name}</h4>
+                    <p className="text-sm text-muted-foreground">{hoveredZone.organ}</p>
+                  </div>
+                  {getStatusBadge(hoveredZone.status)}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Кликнете за повече информация
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-6 bg-muted/30 border-dashed">
+              <div className="text-center text-muted-foreground">
+                <p className="text-sm">Преминете с мишката или кликнете върху зона от диаграмата за да видите детайли</p>
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+        <div className="text-center">
+          <div className="w-4 h-4 rounded-full bg-green-500/30 border-2 border-green-500/60 mx-auto mb-2" />
+          <p className="text-xs font-medium">Норма</p>
+          <p className="text-xs text-muted-foreground">
+            {analysis.zones.filter(z => z.status === 'normal').length} зони
+          </p>
+        </div>
+        <div className="text-center">
+          <div className="w-4 h-4 rounded-full bg-yellow-500/30 border-2 border-yellow-500/80 mx-auto mb-2" />
+          <p className="text-xs font-medium">Внимание</p>
+          <p className="text-xs text-muted-foreground">
+            {analysis.zones.filter(z => z.status === 'attention').length} зони
+          </p>
+        </div>
+        <div className="text-center">
+          <div className="w-4 h-4 rounded-full bg-red-500/30 border-2 border-red-500/80 mx-auto mb-2" />
+          <p className="text-xs font-medium">Притеснение</p>
+          <p className="text-xs text-muted-foreground">
+            {analysis.zones.filter(z => z.status === 'concern').length} зони
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
