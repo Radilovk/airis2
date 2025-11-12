@@ -211,6 +211,11 @@ export default function AnalysisScreen({
         addLog('info', 'Премахнати markdown code fence блокове')
       }
       
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```\s*/, '').replace(/```\s*$/, '')
+        addLog('info', 'Премахнати generic markdown code fence блокове')
+      }
+      
       try {
         cleaned = cleaned
           .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
@@ -232,67 +237,93 @@ export default function AnalysisScreen({
             let extracted = jsonMatch[0]
             
             addLog('info', 'Опит за поправка на незатворени кавички и скоби...')
-            const openBraces = (extracted.match(/\{/g) || []).length
-            const closeBraces = (extracted.match(/\}/g) || []).length
-            const openBrackets = (extracted.match(/\[/g) || []).length
-            const closeBrackets = (extracted.match(/\]/g) || []).length
-            
-            if (openBraces > closeBraces) {
-              addLog('warning', `Липсват ${openBraces - closeBraces} затварящи скоби }`)
-              extracted += '}'.repeat(openBraces - closeBraces)
-            }
-            if (openBrackets > closeBrackets) {
-              addLog('warning', `Липсват ${openBrackets - closeBrackets} затварящи скоби ]`)
-              extracted += ']'.repeat(openBrackets - closeBrackets)
-            }
-            
-            const quotes = (extracted.match(/(?<!\\)"/g) || []).length
-            if (quotes % 2 !== 0) {
-              addLog('warning', 'Нечетен брой кавички - опит за поправка')
-              const lastQuoteIndex = extracted.lastIndexOf('"')
-              if (lastQuoteIndex > -1) {
-                const beforeLastQuote = extracted.substring(0, lastQuoteIndex)
-                const afterLastQuote = extracted.substring(lastQuoteIndex + 1)
-                const commaIndex = afterLastQuote.indexOf(',')
-                const braceIndex = afterLastQuote.indexOf('}')
-                const bracketIndex = afterLastQuote.indexOf(']')
-                
-                const indices = [commaIndex, braceIndex, bracketIndex].filter(i => i > -1)
-                if (indices.length > 0) {
-                  const insertIndex = Math.min(...indices)
-                  extracted = beforeLastQuote + '"' + afterLastQuote.substring(0, insertIndex) + '"' + afterLastQuote.substring(insertIndex)
-                } else {
-                  extracted += '"'
-                }
-              }
-            }
             
             try {
-              const result = JSON.parse(extracted)
+              let fixed = extracted
+              
+              const openBraces = (fixed.match(/\{/g) || []).length
+              const closeBraces = (fixed.match(/\}/g) || []).length
+              const openBrackets = (fixed.match(/\[/g) || []).length
+              const closeBrackets = (fixed.match(/\]/g) || []).length
+              
+              if (openBraces > closeBraces) {
+                addLog('warning', `Липсват ${openBraces - closeBraces} затварящи скоби }`)
+                fixed += '}'.repeat(openBraces - closeBraces)
+              }
+              if (openBrackets > closeBrackets) {
+                addLog('warning', `Липсват ${openBrackets - closeBrackets} затварящи скоби ]`)
+                fixed += ']'.repeat(openBrackets - closeBrackets)
+              }
+              
+              const result = JSON.parse(fixed)
               addLog('success', `JSON поправен и парсиран успешно (${context})`)
               return result
             } catch (repairError) {
-              addLog('warning', `Поправката не помогна, опит с по-агресивна поправка...`)
+              addLog('warning', `Базовата поправка не помогна, опит с по-агресивна поправка...`)
               
               try {
                 let aggressive = extracted
                   .replace(/,(\s*[}\]])/g, '$1')
-                  .replace(/([}\]])([}\]])/g, '$1,$2')
                   .replace(/\s+/g, ' ')
+                
+                const openBraces = (aggressive.match(/\{/g) || []).length
+                const closeBraces = (aggressive.match(/\}/g) || []).length
+                const openBrackets = (aggressive.match(/\[/g) || []).length
+                const closeBrackets = (aggressive.match(/\]/g) || []).length
+                
+                if (openBrackets > closeBrackets) {
+                  aggressive += ']'.repeat(openBrackets - closeBrackets)
+                }
+                if (openBraces > closeBraces) {
+                  aggressive += '}'.repeat(openBraces - closeBraces)
+                }
                 
                 const result = JSON.parse(aggressive)
                 addLog('success', `JSON парсиран след агресивна поправка (${context})`)
                 return result
               } catch (aggressiveError) {
                 addLog('error', `Агресивната поправка също не помогна`)
+                console.error(`❌ [${context}] Опит за поправка се провали:`, aggressiveError)
               }
             }
           }
         } catch (extractError) {
           addLog('error', `Не може да се извлече валиден JSON (${context})`)
+          console.error(`❌ [${context}] Грешка при извличане:`, extractError)
         }
         
         addLog('error', `Не може да се парсира JSON дори след почистване (${context})`)
+        addLog('warning', `Опит да помоля AI да препрати валиден JSON...`)
+        
+        const fixPrompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Следният JSON е невалиден и не може да се парсира. Моля, поправи го и върни САМО валидния JSON, без допълнителен текст:
+
+${response}
+
+ВАЖНО: Върни само валиден JSON обект. Никакъв друг текст.`
+
+        try {
+          addLog('info', 'Изпращане на заявка за поправка на JSON...')
+          const fixedResponse = await callLLMWithRetry(fixPrompt, true, 1)
+          
+          let fixedCleaned = fixedResponse.trim()
+          if (fixedCleaned.startsWith('```json')) {
+            fixedCleaned = fixedCleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '')
+          }
+          if (fixedCleaned.startsWith('```')) {
+            fixedCleaned = fixedCleaned.replace(/^```\s*/, '').replace(/```\s*$/, '')
+          }
+          
+          const fixedMatch = fixedCleaned.match(/\{[\s\S]*\}/)
+          if (fixedMatch) {
+            const result = JSON.parse(fixedMatch[0])
+            addLog('success', `JSON поправен от AI и парсиран успешно (${context})`)
+            return result
+          }
+        } catch (fixError) {
+          addLog('error', `AI не успя да поправи JSON (${context})`)
+          console.error(`❌ [${context}] AI fix грешка:`, fixError)
+        }
+        
         throw new Error(`Невалиден JSON отговор от AI: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
       }
     }
