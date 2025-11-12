@@ -77,14 +77,20 @@ export default function AnalysisScreen({
     side: 'left' | 'right',
     questionnaire: QuestionnaireData
   ): Promise<IrisAnalysis> => {
-    const prompt = (window.spark.llmPrompt as any)`Ти си експерт иридолог. Анализирай този ${side === 'left' ? 'ляв' : 'десен'} ирис и генерирай детайлен иридологичен анализ.
+    const sideName = side === 'left' ? 'ляв' : 'десен'
+    const genderName = questionnaire.gender === 'male' ? 'мъж' : questionnaire.gender === 'female' ? 'жена' : 'друго'
+    const bmi = (questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)
+    const goalsText = questionnaire.goals.join(', ')
+    const complaintsText = questionnaire.complaints || 'Няма'
+    
+    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си експерт иридолог. Анализирай този ${sideName} ирис и генерирай детайлен иридологичен анализ.
 
 Пациент информация:
 - Възраст: ${questionnaire.age}
-- Пол: ${questionnaire.gender === 'male' ? 'мъж' : questionnaire.gender === 'female' ? 'жена' : 'друго'}
-- BMI: ${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
-- Здравни цели: ${questionnaire.goals.join(', ')}
-- Оплаквания: ${questionnaire.complaints || 'Няма'}
+- Пол: ${genderName}
+- BMI: ${bmi}
+- Здравни цели: ${goalsText}
+- Оплаквания: ${complaintsText}
 
 Анализирай според 12-те иридологични зони (по часовника):
 1. Мозък/Хипофиза (12:00)
@@ -142,13 +148,18 @@ export default function AnalysisScreen({
     rightAnalysis: IrisAnalysis,
     questionnaire: QuestionnaireData
   ) => {
-    const prompt = (window.spark.llmPrompt as any)`Базирано на иридологичния анализ, генерирай персонализирани препоръки на български език.
+    const leftFindings = JSON.stringify(leftAnalysis.zones.filter(z => z.status !== 'normal'))
+    const rightFindings = JSON.stringify(rightAnalysis.zones.filter(z => z.status !== 'normal'))
+    const goalsText = questionnaire.goals.join(', ')
+    const complaintsText = questionnaire.complaints || 'Няма'
+    
+    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Базирано на иридологичния анализ, генерирай персонализирани препоръки на български език.
 
-Ляв ирис находки: ${JSON.stringify(leftAnalysis.zones.filter(z => z.status !== 'normal'))}
-Десен ирис находки: ${JSON.stringify(rightAnalysis.zones.filter(z => z.status !== 'normal'))}
+Ляв ирис находки: ${leftFindings}
+Десен ирис находки: ${rightFindings}
 
-Здравни цели: ${questionnaire.goals.join(', ')}
-Оплаквания: ${questionnaire.complaints || 'Няма'}
+Здравни цели: ${goalsText}
+Оплаквания: ${complaintsText}
 
 Генерирай минимум:
 - 5 специфични хранителни препоръки (храни за консумация/избягване)
@@ -173,17 +184,21 @@ export default function AnalysisScreen({
     rightAnalysis: IrisAnalysis,
     questionnaire: QuestionnaireData
   ) => {
-    const prompt = (window.spark.llmPrompt as any)`Генерирай кратко резюме (3-4 параграфа) на иридологичния анализ на български език.
+    const leftZones = leftAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
+    const rightZones = rightAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
+    const goalsText = questionnaire.goals.join(', ')
+    
+    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Генерирай кратко резюме (3-4 параграфа) на иридологичния анализ на български език.
 
 Общо здравословно състояние:
 - Ляв ирис: ${leftAnalysis.overallHealth}/100
 - Десен ирис: ${rightAnalysis.overallHealth}/100
 
 Основни находки (зони с проблеми):
-Ляв: ${leftAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')}
-Десен: ${rightAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')}
+Ляв: ${leftZones}
+Десен: ${rightZones}
 
-Здравни цели на пациента: ${questionnaire.goals.join(', ')}
+Здравни цели на пациента: ${goalsText}
 
 Създай професионално, но разбираемо резюме което:
 1. Обобщава общото здравословно състояние
