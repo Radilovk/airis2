@@ -27,29 +27,40 @@ export default function AnalysisScreen({
 
   const performAnalysis = async () => {
     try {
+      console.log('🚀 [АНАЛИЗ] Стартиране на анализ...')
+      console.log('📊 [АНАЛИЗ] Данни от въпросник:', questionnaireData)
+      
       setProgress(10)
       setStatus('Анализиране на ляв ирис...')
+      console.log('👁️ [АНАЛИЗ] Започване анализ на ляв ирис...')
       
       const leftAnalysis = await analyzeIris(leftIris, 'left', questionnaireData)
+      console.log('✅ [АНАЛИЗ] Ляв ирис анализиран успешно:', leftAnalysis)
       
       setProgress(40)
       setStatus('Анализиране на десен ирис...')
+      console.log('👁️ [АНАЛИЗ] Започване анализ на десен ирис...')
       
       const rightAnalysis = await analyzeIris(rightIris, 'right', questionnaireData)
+      console.log('✅ [АНАЛИЗ] Десен ирис анализиран успешно:', rightAnalysis)
       
       setProgress(70)
       setStatus('Генериране на препоръки...')
+      console.log('💊 [АНАЛИЗ] Започване генериране на препоръки...')
       
       const recommendations = await generateRecommendations(
         leftAnalysis,
         rightAnalysis,
         questionnaireData
       )
+      console.log('✅ [АНАЛИЗ] Препоръки генерирани успешно:', recommendations)
       
       setProgress(90)
       setStatus('Подготовка на доклад...')
+      console.log('📝 [АНАЛИЗ] Започване генериране на резюме...')
       
       const summary = await generateSummary(leftAnalysis, rightAnalysis, questionnaireData)
+      console.log('✅ [АНАЛИЗ] Резюме генерирано успешно:', summary)
       
       setProgress(100)
       setStatus('Завършено!')
@@ -63,11 +74,18 @@ export default function AnalysisScreen({
         summary
       }
       
+      console.log('🎉 [АНАЛИЗ] Доклад завършен успешно!')
+      
       setTimeout(() => {
         onComplete(report)
       }, 1000)
     } catch (error) {
-      console.error('Analysis error:', error)
+      console.error('❌ [ГРЕШКА] Фатална грешка при анализ:', error)
+      console.error('❌ [ГРЕШКА] Име на грешка:', (error as Error)?.name)
+      console.error('❌ [ГРЕШКА] Съобщение:', (error as Error)?.message)
+      console.error('❌ [ГРЕШКА] Stack trace:', (error as Error)?.stack)
+      console.error('❌ [ГРЕШКА] Текущ прогрес при грешка:', progress)
+      console.error('❌ [ГРЕШКА] Текущ статус при грешка:', status)
       setStatus('Грешка при анализа. Моля, опитайте отново.')
     }
   }
@@ -77,13 +95,19 @@ export default function AnalysisScreen({
     side: 'left' | 'right',
     questionnaire: QuestionnaireData
   ): Promise<IrisAnalysis> => {
-    const sideName = side === 'left' ? 'ляв' : 'десен'
-    const genderName = questionnaire.gender === 'male' ? 'мъж' : questionnaire.gender === 'female' ? 'жена' : 'друго'
-    const bmi = (questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)
-    const goalsText = questionnaire.goals.join(', ')
-    const complaintsText = questionnaire.complaints || 'Няма'
-    
-    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си експерт иридолог. Анализирай този ${sideName} ирис и генерирай детайлен иридологичен анализ.
+    try {
+      console.log(`👁️ [ИРИС ${side}] Стартиране анализ на ${side} ирис...`)
+      
+      const sideName = side === 'left' ? 'ляв' : 'десен'
+      const genderName = questionnaire.gender === 'male' ? 'мъж' : questionnaire.gender === 'female' ? 'жена' : 'друго'
+      const bmi = (questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)
+      const goalsText = questionnaire.goals.join(', ')
+      const complaintsText = questionnaire.complaints || 'Няма'
+      
+      console.log(`📝 [ИРИС ${side}] BMI: ${bmi}, Възраст: ${questionnaire.age}, Пол: ${genderName}`)
+      console.log(`📝 [ИРИС ${side}] Цели: ${goalsText}`)
+      
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си експерт иридолог. Анализирай този ${sideName} ирис и генерирай детайлен иридологичен анализ.
 
 Пациент информация:
 - Възраст: ${questionnaire.age}
@@ -134,12 +158,38 @@ export default function AnalysisScreen({
   "systemScores": [{"system": "система", "score": 0-100, "description": "кратко описание"}]
 }`
 
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
-    const parsed = JSON.parse(response)
-    
-    return {
-      side,
-      ...parsed.analysis
+      console.log(`🤖 [ИРИС ${side}] Изпращане на prompt до LLM...`)
+      console.log(`📄 [ИРИС ${side}] Prompt дължина: ${prompt.length} символа`)
+      
+      const response = await window.spark.llm(prompt, 'gpt-4o', true)
+      
+      console.log(`✅ [ИРИС ${side}] Получен отговор от LLM`)
+      console.log(`📄 [ИРИС ${side}] Отговор дължина: ${response.length} символа`)
+      console.log(`📄 [ИРИС ${side}] RAW отговор:`, response)
+      
+      const parsed = JSON.parse(response)
+      console.log(`✅ [ИРИС ${side}] JSON парсиран успешно`)
+      console.log(`📊 [ИРИС ${side}] Парсиран обект:`, parsed)
+      
+      if (!parsed.analysis) {
+        console.error(`❌ [ИРИС ${side}] ГРЕШКА: Липсва 'analysis' property в отговора!`)
+        throw new Error(`Невалиден формат на отговор - липсва 'analysis' property`)
+      }
+      
+      const result = {
+        side,
+        ...parsed.analysis
+      }
+      
+      console.log(`✅ [ИРИС ${side}] Финален резултат:`, result)
+      
+      return result
+    } catch (error) {
+      console.error(`❌ [ИРИС ${side}] ГРЕШКА при анализ на ${side} ирис:`, error)
+      console.error(`❌ [ИРИС ${side}] Име на грешка:`, (error as Error)?.name)
+      console.error(`❌ [ИРИС ${side}] Съобщение:`, (error as Error)?.message)
+      console.error(`❌ [ИРИС ${side}] Stack:`, (error as Error)?.stack)
+      throw error
     }
   }
 
@@ -148,12 +198,18 @@ export default function AnalysisScreen({
     rightAnalysis: IrisAnalysis,
     questionnaire: QuestionnaireData
   ) => {
-    const leftFindings = JSON.stringify(leftAnalysis.zones.filter(z => z.status !== 'normal'))
-    const rightFindings = JSON.stringify(rightAnalysis.zones.filter(z => z.status !== 'normal'))
-    const goalsText = questionnaire.goals.join(', ')
-    const complaintsText = questionnaire.complaints || 'Няма'
-    
-    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Базирано на иридологичния анализ, генерирай персонализирани препоръки на български език.
+    try {
+      console.log('💊 [ПРЕПОРЪКИ] Стартиране генериране на препоръки...')
+      
+      const leftFindings = JSON.stringify(leftAnalysis.zones.filter(z => z.status !== 'normal'))
+      const rightFindings = JSON.stringify(rightAnalysis.zones.filter(z => z.status !== 'normal'))
+      const goalsText = questionnaire.goals.join(', ')
+      const complaintsText = questionnaire.complaints || 'Няма'
+      
+      console.log('📊 [ПРЕПОРЪКИ] Ляв ирис находки (не-нормални зони):', leftFindings)
+      console.log('📊 [ПРЕПОРЪКИ] Десен ирис находки (не-нормални зони):', rightFindings)
+      
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Базирано на иридологичния анализ, генерирай персонализирани препоръки на български език.
 
 Ляв ирис находки: ${leftFindings}
 Десен ирис находки: ${rightFindings}
@@ -174,9 +230,34 @@ export default function AnalysisScreen({
 
 Върни като JSON с property "recommendations" съдържащ масив от препоръки.`
 
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
-    const parsed = JSON.parse(response)
-    return parsed.recommendations
+      console.log('🤖 [ПРЕПОРЪКИ] Изпращане на prompt до LLM...')
+      console.log('📄 [ПРЕПОРЪКИ] Prompt дължина:', prompt.length)
+      
+      const response = await window.spark.llm(prompt, 'gpt-4o', true)
+      
+      console.log('✅ [ПРЕПОРЪКИ] Получен отговор от LLM')
+      console.log('📄 [ПРЕПОРЪКИ] Отговор дължина:', response.length)
+      console.log('📄 [ПРЕПОРЪКИ] RAW отговор:', response)
+      
+      const parsed = JSON.parse(response)
+      console.log('✅ [ПРЕПОРЪКИ] JSON парсиран успешно')
+      console.log('📊 [ПРЕПОРЪКИ] Парсиран обект:', parsed)
+      
+      if (!parsed.recommendations) {
+        console.error('❌ [ПРЕПОРЪКИ] ГРЕШКА: Липсва "recommendations" property!')
+        throw new Error('Невалиден формат на отговор - липсва "recommendations" property')
+      }
+      
+      console.log('✅ [ПРЕПОРЪКИ] Брой препоръки:', parsed.recommendations.length)
+      
+      return parsed.recommendations
+    } catch (error) {
+      console.error('❌ [ПРЕПОРЪКИ] ГРЕШКА при генериране на препоръки:', error)
+      console.error('❌ [ПРЕПОРЪКИ] Име на грешка:', (error as Error)?.name)
+      console.error('❌ [ПРЕПОРЪКИ] Съобщение:', (error as Error)?.message)
+      console.error('❌ [ПРЕПОРЪКИ] Stack:', (error as Error)?.stack)
+      throw error
+    }
   }
 
   const generateSummary = async (
@@ -184,11 +265,19 @@ export default function AnalysisScreen({
     rightAnalysis: IrisAnalysis,
     questionnaire: QuestionnaireData
   ) => {
-    const leftZones = leftAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
-    const rightZones = rightAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
-    const goalsText = questionnaire.goals.join(', ')
-    
-    const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Генерирай кратко резюме (3-4 параграфа) на иридологичния анализ на български език.
+    try {
+      console.log('📝 [РЕЗЮМЕ] Стартиране генериране на резюме...')
+      
+      const leftZones = leftAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
+      const rightZones = rightAnalysis.zones.filter(z => z.status !== 'normal').map(z => z.organ).join(', ')
+      const goalsText = questionnaire.goals.join(', ')
+      
+      console.log('📊 [РЕЗЮМЕ] Общо здраве ляв ирис:', leftAnalysis.overallHealth)
+      console.log('📊 [РЕЗЮМЕ] Общо здраве десен ирис:', rightAnalysis.overallHealth)
+      console.log('📊 [РЕЗЮМЕ] Проблемни зони ляв:', leftZones || 'Няма')
+      console.log('📊 [РЕЗЮМЕ] Проблемни зони десен:', rightZones || 'Няма')
+      
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Генерирай кратко резюме (3-4 параграфа) на иридологичния анализ на български език.
 
 Общо здравословно състояние:
 - Ляв ирис: ${leftAnalysis.overallHealth}/100
@@ -208,8 +297,30 @@ export default function AnalysisScreen({
 
 Върни само текста на резюмето (не JSON).`
 
-    const response = await window.spark.llm(prompt, 'gpt-4o', false)
-    return response
+      console.log('🤖 [РЕЗЮМЕ] Изпращане на prompt до LLM...')
+      console.log('📄 [РЕЗЮМЕ] Prompt дължина:', prompt.length)
+      
+      const response = await window.spark.llm(prompt, 'gpt-4o', false)
+      
+      console.log('✅ [РЕЗЮМЕ] Получен отговор от LLM')
+      console.log('📄 [РЕЗЮМЕ] Отговор дължина:', response.length)
+      console.log('📄 [РЕЗЮМЕ] RAW отговор:', response)
+      
+      if (!response || response.length === 0) {
+        console.error('❌ [РЕЗЮМЕ] ГРЕШКА: Празен отговор от LLM!')
+        throw new Error('Празен отговор при генериране на резюме')
+      }
+      
+      console.log('✅ [РЕЗЮМЕ] Резюме генерирано успешно')
+      
+      return response
+    } catch (error) {
+      console.error('❌ [РЕЗЮМЕ] ГРЕШКА при генериране на резюме:', error)
+      console.error('❌ [РЕЗЮМЕ] Име на грешка:', (error as Error)?.name)
+      console.error('❌ [РЕЗЮМЕ] Съобщение:', (error as Error)?.message)
+      console.error('❌ [РЕЗЮМЕ] Stack:', (error as Error)?.stack)
+      throw error
+    }
   }
 
   return (
