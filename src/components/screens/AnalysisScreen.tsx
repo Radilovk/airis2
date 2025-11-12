@@ -52,14 +52,14 @@ export default function AnalysisScreen({
     prompt: string,
     modelName: string = 'gpt-4o',
     jsonMode: boolean = true,
-    maxRetries: number = 3
+    maxRetries: number = 4
   ): Promise<string> => {
     let lastError: Error | null = null
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
+          const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 15000)
           addLog('warning', `Изчакване ${waitTime}ms преди опит ${attempt}/${maxRetries}...`)
           await sleep(waitTime)
         }
@@ -77,10 +77,10 @@ export default function AnalysisScreen({
         lastError = error instanceof Error ? error : new Error(String(error))
         const errorMsg = lastError.message
         
-        if (errorMsg.includes('429') || errorMsg.includes('Too many requests')) {
+        if (errorMsg.includes('429') || errorMsg.includes('Too many requests') || errorMsg.includes('rate limit')) {
           addLog('warning', `Rate limit (429) - твърде много заявки! Опит ${attempt}/${maxRetries}`)
           if (attempt < maxRetries) {
-            const backoffTime = Math.min(2000 * Math.pow(2, attempt), 15000)
+            const backoffTime = Math.min(3000 * Math.pow(2, attempt), 20000)
             addLog('info', `Изчакване ${backoffTime}ms преди повторен опит...`)
             await sleep(backoffTime)
             continue
@@ -97,7 +97,7 @@ export default function AnalysisScreen({
     throw lastError || new Error('LLM заявката се провали след всички опити')
   }
 
-  const robustJSONParse = (response: string, context: string): any => {
+  const robustJSONParse = async (response: string, context: string): Promise<any> => {
     try {
       return JSON.parse(response)
     } catch (parseError) {
@@ -109,6 +109,11 @@ export default function AnalysisScreen({
       addLog('warning', `Опит за почистване и повторно парсиране (${context})...`)
       
       let cleaned = response.trim()
+      
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json\s*/, '').replace(/```\s*$/, '')
+        addLog('info', 'Премахнати markdown code fence блокове')
+      }
       
       try {
         cleaned = cleaned
@@ -128,10 +133,64 @@ export default function AnalysisScreen({
         try {
           const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
           if (jsonMatch) {
-            const extracted = jsonMatch[0]
-            const result = JSON.parse(extracted)
-            addLog('success', `JSON извлечен и парсиран успешно (${context})`)
-            return result
+            let extracted = jsonMatch[0]
+            
+            addLog('info', 'Опит за поправка на незатворени кавички и скоби...')
+            const openBraces = (extracted.match(/\{/g) || []).length
+            const closeBraces = (extracted.match(/\}/g) || []).length
+            const openBrackets = (extracted.match(/\[/g) || []).length
+            const closeBrackets = (extracted.match(/\]/g) || []).length
+            
+            if (openBraces > closeBraces) {
+              addLog('warning', `Липсват ${openBraces - closeBraces} затварящи скоби }`)
+              extracted += '}'.repeat(openBraces - closeBraces)
+            }
+            if (openBrackets > closeBrackets) {
+              addLog('warning', `Липсват ${openBrackets - closeBrackets} затварящи скоби ]`)
+              extracted += ']'.repeat(openBrackets - closeBrackets)
+            }
+            
+            const quotes = (extracted.match(/(?<!\\)"/g) || []).length
+            if (quotes % 2 !== 0) {
+              addLog('warning', 'Нечетен брой кавички - опит за поправка')
+              const lastQuoteIndex = extracted.lastIndexOf('"')
+              if (lastQuoteIndex > -1) {
+                const beforeLastQuote = extracted.substring(0, lastQuoteIndex)
+                const afterLastQuote = extracted.substring(lastQuoteIndex + 1)
+                const commaIndex = afterLastQuote.indexOf(',')
+                const braceIndex = afterLastQuote.indexOf('}')
+                const bracketIndex = afterLastQuote.indexOf(']')
+                
+                const indices = [commaIndex, braceIndex, bracketIndex].filter(i => i > -1)
+                if (indices.length > 0) {
+                  const insertIndex = Math.min(...indices)
+                  extracted = beforeLastQuote + '"' + afterLastQuote.substring(0, insertIndex) + '"' + afterLastQuote.substring(insertIndex)
+                } else {
+                  extracted += '"'
+                }
+              }
+            }
+            
+            try {
+              const result = JSON.parse(extracted)
+              addLog('success', `JSON поправен и парсиран успешно (${context})`)
+              return result
+            } catch (repairError) {
+              addLog('warning', `Поправката не помогна, опит с по-агресивна поправка...`)
+              
+              try {
+                let aggressive = extracted
+                  .replace(/,(\s*[}\]])/g, '$1')
+                  .replace(/([}\]])([}\]])/g, '$1,$2')
+                  .replace(/\s+/g, ' ')
+                
+                const result = JSON.parse(aggressive)
+                addLog('success', `JSON парсиран след агресивна поправка (${context})`)
+                return result
+              } catch (aggressiveError) {
+                addLog('error', `Агресивната поправка също не помогна`)
+              }
+            }
           }
         } catch (extractError) {
           addLog('error', `Не може да се извлече валиден JSON (${context})`)
@@ -268,63 +327,34 @@ export default function AnalysisScreen({
       console.log(`📝 [ИРИС ${side}] Цели: ${goalsText}`)
       
       addLog('info', 'Подготовка на prompt за LLM...')
-      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си експерт иридолог. Анализирай този ${sideName} ирис и генерирай детайлен иридологичен анализ.
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си иридолог. Анализирай ${sideName} ирис.
 
-Пациент информация:
-- Възраст: ${questionnaire.age}
-- Пол: ${genderName}
-- BMI: ${bmi}
-- Здравни цели: ${goalsText}
-- Оплаквания: ${complaintsText}
+Пациент: Възраст ${questionnaire.age}, Пол ${genderName}, BMI ${bmi}
+Цели: ${goalsText}
+Оплаквания: ${complaintsText}
 
-Анализирай според 12-те иридологични зони (по часовника):
-1. Мозък/Хипофиза (12:00)
-2. Бронхи/Щитовидна жлеза (1:00)
-3. Рамо/Белодробна зона (2:00)
-4. Черен дроб/Жлъчка (3:00 за десен, 9:00 за ляв)
-5. Стомах/Панкреас (4:00-5:00)
-6. Дебело черво (5:00-7:00)
-7. Урогенитална зона (6:00)
-8. Бъбреци (5:00-7:00)
-9. Далак (3:00 за ляв, 9:00 за десен)
-10. Сърце (2:00-3:00 за ляв)
-11. Ендокринна система (централно)
-12. Нервна система (автономен пръстен)
+Анализирай 8-12 зони по часовника (12:00 горе): Мозък, Щитовидна, Белодробна, Черен дроб, Стомах, Дебело черво, Урогенитална, Бъбреци, Далак, Сърце, Ендокринна, Нервна.
 
-За всяка зона оцени:
-- Статус: normal (норма), attention (внимание), concern (притеснение)
-- Конкретни находки
+За всяка зона: status (normal/attention/concern), findings (до 60 символа).
 
-Също така идентифицирай типични иридологични артефакти:
-- Лакуни (празнини в структурата)
-- Криптe (вдлъбнатини)
-- Пигментни петна
-- Радиални линии
-- Контракционни пръстени
-- Плътност на ириса
+Идентифицирай 2-4 артефакта: лакуни, крипти, пигменти, радиални линии, пръстени.
 
-Генерирай оценки за различни органни системи (0-100):
-- Храносмилателна система
-- Имунна система  
-- Нервна система
-- Сърдечно-съдова система
-- Детоксикация
-- Ендокринна система
+Генерирай 6 system scores (0-100): Храносмилателна, Имунна, Нервна, Сърдечно-съдова, Детоксикация, Ендокринна.
 
-КРИТИЧНО ВАЖНО ЗА JSON ФОРМАТ:
-1. Върни САМО валиден JSON - никакъв друг текст преди или след
-2. В текстови стойности НЕ използвай вътрешни двойни кавички - замени ги с единични или премахни
-3. Всички описания трябва да са кратки (до 100 символа) и на един ред
-4. НЕ слагай нови редове (\\n) в текстовите стойности
-5. Ако трябва да споменеш кавички, използвай думата "кавички" вместо символа
+ВАЖНО:
+- Върни САМО валиден JSON
+- Кратки описания (до 60 символа)
+- БЕЗ нови редове (\\n) в текстове
+- БЕЗ вътрешни двойни кавички
+- Използвай единични кавички ' вместо двойни " в текстове
 
-Върни резултата като JSON обект с property "analysis" съдържащ: 
+JSON формат:
 {
   "analysis": {
-    "zones": [{"id": 1, "name": "име", "organ": "орган", "status": "normal", "findings": "кратко описание без нови редове", "angle": [0, 30]}],
-    "artifacts": [{"type": "тип", "location": "локация", "description": "кратко описание без нови редове", "severity": "low"}],
+    "zones": [{"id": 1, "name": "име", "organ": "орган", "status": "normal", "findings": "текст до 60 символа", "angle": [0, 30]}],
+    "artifacts": [{"type": "тип", "location": "локация", "description": "текст до 60 символа", "severity": "low"}],
     "overallHealth": 75,
-    "systemScores": [{"system": "система", "score": 80, "description": "кратко описание без нови редове"}]
+    "systemScores": [{"system": "система", "score": 80, "description": "текст до 60 символа"}]
   }
 }`
 
@@ -341,7 +371,7 @@ export default function AnalysisScreen({
       console.log(`📄 [ИРИС ${side}] RAW отговор:`, response)
       
       addLog('info', 'Парсиране на JSON отговор...')
-      const parsed = robustJSONParse(response, `ИРИС ${side}`)
+      const parsed = await robustJSONParse(response, `ИРИС ${side}`)
       
       addLog('success', 'JSON парсиран успешно')
       console.log(`✅ [ИРИС ${side}] JSON парсиран успешно`)
@@ -392,35 +422,34 @@ export default function AnalysisScreen({
       console.log('📊 [ПРЕПОРЪКИ] Ляв ирис находки (не-нормални зони):', leftFindings)
       console.log('📊 [ПРЕПОРЪКИ] Десен ирис находки (не-нормални зони):', rightFindings)
       
-      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Базирано на иридологичния анализ, генерирай персонализирани препоръки на български език.
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Генерирай персонализирани препоръки на български.
 
-Ляв ирис находки: ${leftFindings}
-Десен ирис находки: ${rightFindings}
-
-Здравни цели: ${goalsText}
+Ляв ирис: ${leftFindings}
+Десен ирис: ${rightFindings}
+Цели: ${goalsText}
 Оплаквания: ${complaintsText}
 
 Генерирай минимум:
-- 5 специфични хранителни препоръки (храни за консумация/избягване)
-- 3-5 препоръки за хранителни добавки
+- 5 хранителни препоръки (храни за консумация/избягване)
+- 3-5 хранителни добавки
 - 2-3 препоръки за начин на живот
 
-Всяка препоръка трябва да има:
-- category: "diet", "supplement" или "lifestyle"
-- title: кратко заглавие (на един ред)
-- description: подробно обяснение (на един ред, без нови редове)
-- priority: "high", "medium" или "low"
+Всяка препоръка:
+- category: "diet", "supplement", "lifestyle"
+- title: кратко (до 40 символа)
+- description: подробно (до 120 символа, БЕЗ нови редове)
+- priority: "high", "medium", "low"
 
-КРИТИЧНО ВАЖНО ЗА JSON ФОРМАТ:
-1. Върни САМО валиден JSON - никакъв друг текст преди или след
-2. В текстови стойности НЕ използвай вътрешни двойни кавички - замени ги с единични или премахни
-3. Всички описания трябва да са на един ред (до 200 символа)
-4. НЕ слагай нови редове (\\n) в текстовите стойности
+ВАЖНО:
+- Върни САМО валиден JSON
+- БЕЗ нови редове (\\n)
+- БЕЗ вътрешни двойни кавички
+- Единични ' кавички в текстове
 
-Върни като JSON обект с property "recommendations" съдържащ масив от препоръки:
+JSON:
 {
   "recommendations": [
-    {"category": "diet", "title": "заглавие", "description": "описание на един ред", "priority": "high"}
+    {"category": "diet", "title": "заглавие", "description": "описание", "priority": "high"}
   ]
 }`
 
@@ -437,7 +466,7 @@ export default function AnalysisScreen({
       console.log('📄 [ПРЕПОРЪКИ] RAW отговор:', response)
       
       addLog('info', 'Парсиране на JSON...')
-      const parsed = robustJSONParse(response, 'ПРЕПОРЪКИ')
+      const parsed = await robustJSONParse(response, 'ПРЕПОРЪКИ')
       
       addLog('success', 'JSON парсиран успешно')
       console.log('✅ [ПРЕПОРЪКИ] JSON парсиран успешно')
