@@ -46,6 +46,35 @@ export default function AnalysisScreen({
     console.log(`${emoji} [${timestamp}] ${message}`)
   }
 
+  const robustJSONParse = (response: string, context: string): any => {
+    try {
+      return JSON.parse(response)
+    } catch (parseError) {
+      addLog('error', `JSON parse грешка (${context}): ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+      console.error(`❌ [${context}] JSON parse грешка:`, parseError)
+      console.error(`📄 [${context}] Проблемен JSON (първи 500 символа):`, response.substring(0, 500))
+      console.error(`📄 [${context}] Проблемен JSON (последни 500 символа):`, response.substring(response.length - 500))
+      
+      addLog('warning', `Опит за почистване и повторно парсиране (${context})...`)
+      try {
+        const cleaned = response
+          .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+          .replace(/\n/g, ' ')
+          .replace(/\r/g, '')
+          .replace(/\t/g, ' ')
+          .replace(/\\/g, '')
+          .trim()
+        
+        const result = JSON.parse(cleaned)
+        addLog('success', `JSON парсиран успешно след почистване (${context})`)
+        return result
+      } catch (cleanError) {
+        addLog('error', `Не може да се парсира JSON дори след почистване (${context})`)
+        throw new Error(`Невалиден JSON отговор от AI: ${parseError instanceof Error ? parseError.message : String(parseError)}`)
+      }
+    }
+  }
+
   useEffect(() => {
     performAnalysis()
   }, [])
@@ -198,12 +227,16 @@ export default function AnalysisScreen({
 - Детоксикация
 - Ендокринна система
 
+ВАЖНО: Върни валиден JSON обект. В стойности на всички текстови полета използвай само обикновен текст - БЕЗ кавички, БЕЗ нови редове, БЕЗ табулации. Всички текстови описания трябва да са на един ред.
+
 Върни резултата като JSON обект с property "analysis" съдържащ: 
 {
-  "zones": [{"id": 1-12, "name": "име на зоната", "organ": "орган", "status": "normal/attention/concern", "findings": "описание", "angle": [начало, край в градуси]}],
-  "artifacts": [{"type": "тип", "location": "локация", "description": "описание", "severity": "low/medium/high"}],
-  "overallHealth": 0-100,
-  "systemScores": [{"system": "система", "score": 0-100, "description": "кратко описание"}]
+  "analysis": {
+    "zones": [{"id": 1, "name": "име", "organ": "орган", "status": "normal", "findings": "кратко описание без нови редове", "angle": [0, 30]}],
+    "artifacts": [{"type": "тип", "location": "локация", "description": "кратко описание без нови редове", "severity": "low"}],
+    "overallHealth": 75,
+    "systemScores": [{"system": "система", "score": 80, "description": "кратко описание без нови редове"}]
+  }
 }`
 
       addLog('info', `Изпращане на prompt до LLM (${prompt.length} символа)...`)
@@ -219,7 +252,8 @@ export default function AnalysisScreen({
       console.log(`📄 [ИРИС ${side}] RAW отговор:`, response)
       
       addLog('info', 'Парсиране на JSON отговор...')
-      const parsed = JSON.parse(response)
+      const parsed = robustJSONParse(response, `ИРИС ${side}`)
+      
       addLog('success', 'JSON парсиран успешно')
       console.log(`✅ [ИРИС ${side}] JSON парсиран успешно`)
       console.log(`📊 [ИРИС ${side}] Парсиран обект:`, parsed)
@@ -284,11 +318,18 @@ export default function AnalysisScreen({
 
 Всяка препоръка трябва да има:
 - category: "diet", "supplement" или "lifestyle"
-- title: кратко заглавие
-- description: подробно обяснение (2-3 изречения)
+- title: кратко заглавие (на един ред)
+- description: подробно обяснение (на един ред, без нови редове)
 - priority: "high", "medium" или "low"
 
-Върни като JSON с property "recommendations" съдържащ масив от препоръки.`
+ВАЖНО: Върни валиден JSON. Използвай само обикновен текст в стойности - БЕЗ кавички в текста, БЕЗ нови редове, БЕЗ табулации.
+
+Върни като JSON обект с property "recommendations" съдържащ масив от препоръки:
+{
+  "recommendations": [
+    {"category": "diet", "title": "заглавие", "description": "описание на един ред", "priority": "high"}
+  ]
+}`
 
       addLog('info', 'Изпращане на prompt за препоръки до LLM...')
       console.log('🤖 [ПРЕПОРЪКИ] Изпращане на prompt до LLM...')
@@ -303,7 +344,8 @@ export default function AnalysisScreen({
       console.log('📄 [ПРЕПОРЪКИ] RAW отговор:', response)
       
       addLog('info', 'Парсиране на JSON...')
-      const parsed = JSON.parse(response)
+      const parsed = robustJSONParse(response, 'ПРЕПОРЪКИ')
+      
       addLog('success', 'JSON парсиран успешно')
       console.log('✅ [ПРЕПОРЪКИ] JSON парсиран успешно')
       console.log('📊 [ПРЕПОРЪКИ] Парсиран обект:', parsed)
@@ -480,11 +522,28 @@ export default function AnalysisScreen({
             )}
 
             {error && (
-              <div className="mt-6 p-4 bg-destructive/10 rounded-lg text-left">
-                <p className="text-sm text-destructive font-mono whitespace-pre-wrap">
-                  {error}
-                </p>
-              </div>
+              <>
+                <div className="mt-6 p-4 bg-destructive/10 rounded-lg text-left">
+                  <p className="text-sm text-destructive font-mono whitespace-pre-wrap">
+                    {error}
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <Button
+                    onClick={() => {
+                      setError(null)
+                      setProgress(0)
+                      setStatus('Подготовка за анализ...')
+                      setLogs([])
+                      performAnalysis()
+                    }}
+                    className="gap-2"
+                  >
+                    <Sparkle size={20} />
+                    Опитай отново
+                  </Button>
+                </div>
+              </>
             )}
 
             <div className="mt-8">
