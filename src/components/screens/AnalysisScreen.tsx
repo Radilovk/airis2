@@ -52,15 +52,15 @@ export default function AnalysisScreen({
     prompt: string,
     modelName: string = 'gpt-4o',
     jsonMode: boolean = true,
-    maxRetries: number = 4
+    maxRetries: number = 3
   ): Promise<string> => {
     let lastError: Error | null = null
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 15000)
-          addLog('warning', `Изчакване ${waitTime}ms преди опит ${attempt}/${maxRetries}...`)
+          const waitTime = Math.min(5000 * Math.pow(2, attempt - 1), 30000)
+          addLog('warning', `Изчакване ${(waitTime / 1000).toFixed(1)}s преди опит ${attempt}/${maxRetries}...`)
           await sleep(waitTime)
         }
         
@@ -78,16 +78,19 @@ export default function AnalysisScreen({
         const errorMsg = lastError.message
         
         if (errorMsg.includes('429') || errorMsg.includes('Too many requests') || errorMsg.includes('rate limit')) {
-          addLog('warning', `Rate limit (429) - твърде много заявки! Опит ${attempt}/${maxRetries}`)
+          addLog('warning', `⏱️ Rate limit (429) - твърде много заявки! Опит ${attempt}/${maxRetries}`)
           if (attempt < maxRetries) {
-            const backoffTime = Math.min(3000 * Math.pow(2, attempt), 20000)
-            addLog('info', `Изчакване ${backoffTime}ms преди повторен опит...`)
+            const backoffTime = 30000 + (attempt * 10000)
+            addLog('info', `⏳ Изчакване ${(backoffTime / 1000).toFixed(0)}s преди повторен опит поради rate limit...`)
             await sleep(backoffTime)
             continue
+          } else {
+            throw new Error('Rate limit достигнат след всички опити. Моля изчакайте 1-2 минути преди да опитате отново.')
           }
         } else {
           addLog('error', `LLM грешка (опит ${attempt}): ${errorMsg}`)
           if (attempt < maxRetries) {
+            await sleep(3000)
             continue
           }
         }
@@ -223,8 +226,8 @@ export default function AnalysisScreen({
       addLog('success', 'Ляв ирис анализиран успешно')
       console.log('✅ [АНАЛИЗ] Ляв ирис анализиран успешно:', leftAnalysis)
       
-      addLog('info', 'Изчакване 2 сек. преди следваща заявка...')
-      await sleep(2000)
+      addLog('info', '⏳ Изчакване 8 сек. за избягване на rate limit...')
+      await sleep(8000)
       
       setProgress(40)
       setStatus('Анализиране на десен ирис...')
@@ -235,8 +238,8 @@ export default function AnalysisScreen({
       addLog('success', 'Десен ирис анализиран успешно')
       console.log('✅ [АНАЛИЗ] Десен ирис анализиран успешно:', rightAnalysis)
       
-      addLog('info', 'Изчакване 2 сек. преди следваща заявка...')
-      await sleep(2000)
+      addLog('info', '⏳ Изчакване 8 сек. за избягване на rate limit...')
+      await sleep(8000)
       
       setProgress(70)
       setStatus('Генериране на препоръки...')
@@ -251,8 +254,8 @@ export default function AnalysisScreen({
       addLog('success', `Препоръки генерирани успешно (${recommendations.length} бр.)`)
       console.log('✅ [АНАЛИЗ] Препоръки генерирани успешно:', recommendations)
       
-      addLog('info', 'Изчакване 2 сек. преди следваща заявка...')
-      await sleep(2000)
+      addLog('info', '⏳ Изчакване 8 сек. за избягване на rate limit...')
+      await sleep(8000)
       
       setProgress(90)
       setStatus('Подготовка на доклад...')
@@ -286,9 +289,9 @@ export default function AnalysisScreen({
       const errorStack = error instanceof Error ? error.stack : 'Няма stack trace'
       
       let userFriendlyMessage = errorMessage
-      if (errorMessage.includes('429') || errorMessage.includes('Too many requests')) {
-        userFriendlyMessage = '⏱️ Твърде много заявки към AI модела. Моля изчакайте 30 секунди и опитайте отново.'
-        addLog('error', 'Rate limit достигнат - твърде много заявки')
+      if (errorMessage.includes('429') || errorMessage.includes('Too many requests') || errorMessage.includes('rate limit')) {
+        userFriendlyMessage = '⏱️ Твърде много заявки към AI модела.\n\n💡 Моля изчакайте 1-2 минути и натиснете "Опитай отново".\n\nПричина: GitHub Spark има лимит за брой AI заявки в кратък период от време. Изчакването ще позволи на системата да се възстанови.'
+        addLog('error', 'Rate limit достигнат - твърде много заявки. Изчакайте 1-2 минути.')
       } else {
         addLog('error', `Фатална грешка: ${errorMessage}`)
       }
@@ -302,7 +305,7 @@ export default function AnalysisScreen({
       console.error('❌ [ГРЕШКА] Текущ прогрес при грешка:', progress)
       console.error('❌ [ГРЕШКА] Текущ статус при грешка:', status)
       
-      setStatus(`Грешка: ${userFriendlyMessage}`)
+      setStatus(`Грешка: ${userFriendlyMessage.split('\n\n')[0]}`)
       setShowDebug(true)
     }
   }
@@ -601,7 +604,7 @@ JSON:
               {error ? 'Възникна грешка' : 'AI Анализ в ход'}
             </h2>
             <p className={`mb-8 ${error ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {error ? 'Моля, проверете логовете за повече информация' : 'Анализираме вашите ириси с изкуствен интелект'}
+              {error ? 'Моля, изчакайте 1-2 минути и натиснете "Опитай отново"' : 'Анализираме вашите ириси с изкуствен интелект'}
             </p>
 
             {!error && (
@@ -638,6 +641,11 @@ JSON:
                     <span className={progress >= 90 ? 'text-foreground' : 'text-muted-foreground'}>
                       Финализиране на доклад
                     </span>
+                  </div>
+                  <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/50">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      ℹ️ Процесът отнема 30-60 секунди. Приложението изчаква между заявките за избягване на лимити.
+                    </p>
                   </div>
                 </div>
               </>
