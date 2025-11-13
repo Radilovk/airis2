@@ -35,10 +35,12 @@ export default function AnalysisScreen({
   const [error, setError] = useState<string | null>(null)
   
   const [aiConfig] = useKV<AIModelConfig>('ai-model-config', {
-    provider: 'openai',
+    provider: 'github-spark',
     model: 'gpt-4o',
     apiKey: '',
-    useCustomKey: false
+    useCustomKey: false,
+    requestDelay: 30000,
+    requestCount: 4
   })
 
   const addLog = (level: LogEntry['level'], message: string) => {
@@ -59,7 +61,7 @@ export default function AnalysisScreen({
 
   const callExternalAPI = async (
     prompt: string,
-    provider: 'openai' | 'gemini',
+    provider: 'openai' | 'gemini' | 'github-spark',
     model: string,
     apiKey: string,
     jsonMode: boolean = true
@@ -126,20 +128,21 @@ export default function AnalysisScreen({
   ): Promise<string> => {
     let lastError: Error | null = null
     
-    const useCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey
-    const provider = aiConfig?.provider || 'openai'
+    const useCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig?.provider !== 'github-spark'
+    const provider = aiConfig?.provider || 'github-spark'
     const actualModel = aiConfig?.model || 'gpt-4o'
+    const requestDelay = aiConfig?.requestDelay || 30000
     
     if (useCustomAPI) {
-      addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel})`)
+      addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
     } else {
-      addLog('info', `🔧 Режим: GitHub Spark вграден модел (gpt-4o-mini за по-малко заявки)`)
+      addLog('info', `🔧 Режим: GitHub Spark вграден модел (${actualModel}) | Забавяне: ${requestDelay}ms`)
     }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          const waitTime = useCustomAPI ? 5000 : Math.min(30000 * attempt, 120000)
+          const waitTime = useCustomAPI ? Math.min(requestDelay, 10000) : Math.min(requestDelay * attempt, 120000)
           addLog('warning', `Изчакване ${(waitTime / 1000).toFixed(0)}s преди опит ${attempt}/${maxRetries}...`)
           await sleep(waitTime)
         }
@@ -147,16 +150,16 @@ export default function AnalysisScreen({
         addLog('info', `LLM заявка (опит ${attempt}/${maxRetries})...`)
         
         let response: string
-        if (useCustomAPI) {
+        if (useCustomAPI && provider !== 'github-spark') {
           response = await callExternalAPI(
             prompt,
-            provider,
+            provider as 'openai' | 'gemini',
             actualModel,
             aiConfig!.apiKey,
             jsonMode
           )
         } else {
-          response = await window.spark.llm(prompt, 'gpt-4o-mini', jsonMode)
+          response = await window.spark.llm(prompt, actualModel as any, jsonMode)
         }
         
         if (response && response.length > 0) {
@@ -349,9 +352,9 @@ ${response}
       addLog('success', 'Ляв ирис анализиран успешно')
       console.log('✅ [АНАЛИЗ] Ляв ирис анализиран успешно:', leftAnalysis)
       
-      const waitTime = aiConfig?.useCustomKey ? 3000 : 60000
-      addLog('info', `⏳ Изчакване ${waitTime/1000} сек. за избягване на rate limit...`)
-      await sleep(waitTime)
+      const requestDelay = aiConfig?.requestDelay || 30000
+      addLog('info', `⏳ Изчакване ${requestDelay/1000} сек. за избягване на rate limit...`)
+      await sleep(requestDelay)
       
       setProgress(40)
       setStatus('Анализиране на десен ирис...')
@@ -362,9 +365,8 @@ ${response}
       addLog('success', 'Десен ирис анализиран успешно')
       console.log('✅ [АНАЛИЗ] Десен ирис анализиран успешно:', rightAnalysis)
       
-      const waitTime2 = aiConfig?.useCustomKey ? 3000 : 60000
-      addLog('info', `⏳ Изчакване ${waitTime2/1000} сек. за избягване на rate limit...`)
-      await sleep(waitTime2)
+      addLog('info', `⏳ Изчакване ${requestDelay/1000} сек. за избягване на rate limit...`)
+      await sleep(requestDelay)
       
       setProgress(70)
       setStatus('Генериране на препоръки...')
@@ -379,9 +381,8 @@ ${response}
       addLog('success', `Препоръки генерирани успешно (${recommendations.length} бр.)`)
       console.log('✅ [АНАЛИЗ] Препоръки генерирани успешно:', recommendations)
       
-      const waitTime3 = aiConfig?.useCustomKey ? 3000 : 60000
-      addLog('info', `⏳ Изчакване ${waitTime3/1000} сек. за избягване на rate limit...`)
-      await sleep(waitTime3)
+      addLog('info', `⏳ Изчакване ${requestDelay/1000} сек. за избягване на rate limit...`)
+      await sleep(requestDelay)
       
       setProgress(90)
       setStatus('Подготовка на доклад...')
@@ -396,7 +397,9 @@ ${response}
       setStatus('Завършено!')
       addLog('success', '🎉 Доклад завършен успешно!')
       
+      const reportId = `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const report: AnalysisReport = {
+        id: reportId,
         timestamp: new Date().toISOString(),
         questionnaireData,
         leftIris: leftAnalysis,

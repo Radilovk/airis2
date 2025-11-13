@@ -106,6 +106,7 @@ export interface Recommendation {
 }
 
 export interface AnalysisReport {
+  id: string
   timestamp: string
   questionnaireData: QuestionnaireData
   leftIris: IrisAnalysis
@@ -114,13 +115,26 @@ export interface AnalysisReport {
   rightIrisImage: IrisImage
   recommendations: Recommendation[]
   summary: string
+  briefSummary?: string
+  detailedPlan?: {
+    generalRecommendations: string[]
+    recommendedFoods: string[]
+    avoidFoods: string[]
+    supplements: string[]
+    dosageInstructions: string[]
+    psychologicalRecommendations: string[]
+    specialRecommendations: string[]
+    recommendedTests: string[]
+  }
 }
 
 export interface AIModelConfig {
-  provider: 'openai' | 'gemini'
+  provider: 'openai' | 'gemini' | 'github-spark'
   model: string
   apiKey: string
   useCustomKey: boolean
+  requestDelay?: number
+  requestCount?: number
 }
 
 export interface IridologyTextbook {

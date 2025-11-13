@@ -11,6 +11,7 @@ import {
   ClipboardText
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { jsPDF } from 'jspdf'
 import type { AnalysisReport } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
@@ -26,76 +27,202 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
   const avgHealth = Math.round((report.leftIris.overallHealth + report.rightIris.overallHealth) / 2)
 
   const handleExport = () => {
-    const reportText = `
-ИРИДОЛОГИЧЕН ДОКЛАД
-Дата: ${new Date(report.timestamp).toLocaleDateString('bg-BG', { day: 'numeric', month: 'long', year: 'numeric' })}
+    try {
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const margin = 20
+      let yPos = 20
 
-БИОМЕТРИЧНИ ДАННИ
-Възраст: ${report.questionnaireData.age} години
-Пол: ${report.questionnaireData.gender === 'male' ? 'Мъж' : report.questionnaireData.gender === 'female' ? 'Жена' : 'Друго'}
-Тегло: ${report.questionnaireData.weight} кг
-Ръст: ${report.questionnaireData.height} см
-BMI: ${(report.questionnaireData.weight / ((report.questionnaireData.height / 100) ** 2)).toFixed(1)}
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ИРИДОЛОГИЧЕН ДОКЛАД', pageWidth / 2, yPos, { align: 'center' })
+      yPos += 10
 
-ЗДРАВНИ ЦЕЛИ
-${report.questionnaireData.goals.map(g => `• ${g}`).join('\n')}
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Дата: ${new Date(report.timestamp).toLocaleDateString('bg-BG', { day: 'numeric', month: 'long', year: 'numeric' })}`, pageWidth / 2, yPos, { align: 'center' })
+      yPos += 15
 
-ОПЛАКВАНИЯ
-${report.questionnaireData.complaints || 'Няма'}
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('БИОМЕТРИЧНИ ДАННИ', margin, yPos)
+      yPos += 7
 
-ОБОБЩЕНИЕ
-${report.summary}
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Име: ${report.questionnaireData.name}`, margin, yPos)
+      yPos += 5
+      doc.text(`Възраст: ${report.questionnaireData.age} години | Пол: ${report.questionnaireData.gender === 'male' ? 'Мъж' : report.questionnaireData.gender === 'female' ? 'Жена' : 'Друго'}`, margin, yPos)
+      yPos += 5
+      doc.text(`Тегло: ${report.questionnaireData.weight} кг | Ръст: ${report.questionnaireData.height} см | BMI: ${(report.questionnaireData.weight / ((report.questionnaireData.height / 100) ** 2)).toFixed(1)}`, margin, yPos)
+      yPos += 10
 
-РЕЗУЛТАТИ
-Общо здравословно състояние: ${avgHealth}/100
-Ляв ирис: ${report.leftIris.overallHealth}/100
-Десен ирис: ${report.rightIris.overallHealth}/100
-Зони за внимание: ${report.leftIris.zones.filter(z => z.status !== 'normal').length + report.rightIris.zones.filter(z => z.status !== 'normal').length}
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ЗДРАВНИ ЦЕЛИ', margin, yPos)
+      yPos += 7
 
-ЛЯВ ИРИС - ЗОНИ С ОТКЛОНЕНИЯ
-${report.leftIris.zones.filter(z => z.status !== 'normal').map(z => `
-${z.name} (${z.organ})
-Статус: ${z.status === 'attention' ? 'Внимание' : 'Притеснение'}
-Находки: ${z.findings}
-`).join('\n')}
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      report.questionnaireData.goals.forEach((goal) => {
+        doc.text(`• ${goal}`, margin + 5, yPos)
+        yPos += 5
+      })
+      yPos += 5
 
-ДЕСЕН ИРИС - ЗОНИ С ОТКЛОНЕНИЯ
-${report.rightIris.zones.filter(z => z.status !== 'normal').map(z => `
-${z.name} (${z.organ})
-Статус: ${z.status === 'attention' ? 'Внимание' : 'Притеснение'}
-Находки: ${z.findings}
-`).join('\n')}
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ОБОБЩЕНИЕ', margin, yPos)
+      yPos += 7
 
-ПРЕПОРЪКИ ЗА ХРАНЕНЕ
-${report.recommendations.filter(r => r.category === 'diet').map(r => `
-${r.title} (Приоритет: ${r.priority === 'high' ? 'Висок' : r.priority === 'medium' ? 'Среден' : 'Нисък'})
-${r.description}
-`).join('\n')}
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      const summaryLines = doc.splitTextToSize(report.summary, pageWidth - 2 * margin)
+      summaryLines.forEach((line: string) => {
+        if (yPos > 270) {
+          doc.addPage()
+          yPos = 20
+        }
+        doc.text(line, margin, yPos)
+        yPos += 5
+      })
+      yPos += 5
 
-ПРЕПОРЪКИ ЗА ХРАНИТЕЛНИ ДОБАВКИ
-${report.recommendations.filter(r => r.category === 'supplement').map(r => `
-${r.title} (Приоритет: ${r.priority === 'high' ? 'Висок' : r.priority === 'medium' ? 'Среден' : 'Нисък'})
-${r.description}
-`).join('\n')}
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('РЕЗУЛТАТИ', margin, yPos)
+      yPos += 7
 
-ПРЕПОРЪКИ ЗА НАЧИН НА ЖИВОТ
-${report.recommendations.filter(r => r.category === 'lifestyle').map(r => `
-${r.title} (Приоритет: ${r.priority === 'high' ? 'Висок' : r.priority === 'medium' ? 'Среден' : 'Нисък'})
-${r.description}
-`).join('\n')}
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Общо здравословно състояние: ${avgHealth}/100`, margin, yPos)
+      yPos += 5
+      doc.text(`Ляв ирис: ${report.leftIris.overallHealth}/100`, margin, yPos)
+      yPos += 5
+      doc.text(`Десен ирис: ${report.rightIris.overallHealth}/100`, margin, yPos)
+      yPos += 5
+      doc.text(`Зони за внимание: ${report.leftIris.zones.filter(z => z.status !== 'normal').length + report.rightIris.zones.filter(z => z.status !== 'normal').length}`, margin, yPos)
+      yPos += 10
 
----
-Този доклад е генериран от AI система за иридологичен анализ и не замества професионална медицинска консултация.
-    `.trim()
+      if (yPos > 240) {
+        doc.addPage()
+        yPos = 20
+      }
 
-    const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `iridology-report-${new Date().toISOString().split('T')[0]}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success('Докладът е изтеглен успешно')
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ЛЯВ ИРИС - ЗОНИ С ОТКЛОНЕНИЯ', margin, yPos)
+      yPos += 7
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      report.leftIris.zones.filter(z => z.status !== 'normal').forEach((z) => {
+        if (yPos > 270) {
+          doc.addPage()
+          yPos = 20
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${z.name} (${z.organ})`, margin, yPos)
+        yPos += 4
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Статус: ${z.status === 'attention' ? 'Внимание' : 'Притеснение'}`, margin + 5, yPos)
+        yPos += 4
+        const findingsLines = doc.splitTextToSize(`Находки: ${z.findings}`, pageWidth - 2 * margin - 10)
+        findingsLines.forEach((line: string) => {
+          if (yPos > 270) {
+            doc.addPage()
+            yPos = 20
+          }
+          doc.text(line, margin + 5, yPos)
+          yPos += 4
+        })
+        yPos += 2
+      })
+
+      if (yPos > 240) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ДЕСЕН ИРИС - ЗОНИ С ОТКЛОНЕНИЯ', margin, yPos)
+      yPos += 7
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      report.rightIris.zones.filter(z => z.status !== 'normal').forEach((z) => {
+        if (yPos > 270) {
+          doc.addPage()
+          yPos = 20
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${z.name} (${z.organ})`, margin, yPos)
+        yPos += 4
+        doc.setFont('helvetica', 'normal')
+        doc.text(`Статус: ${z.status === 'attention' ? 'Внимание' : 'Притеснение'}`, margin + 5, yPos)
+        yPos += 4
+        const findingsLines = doc.splitTextToSize(`Находки: ${z.findings}`, pageWidth - 2 * margin - 10)
+        findingsLines.forEach((line: string) => {
+          if (yPos > 270) {
+            doc.addPage()
+            yPos = 20
+          }
+          doc.text(line, margin + 5, yPos)
+          yPos += 4
+        })
+        yPos += 2
+      })
+
+      if (yPos > 240) {
+        doc.addPage()
+        yPos = 20
+      }
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ПРЕПОРЪКИ', margin, yPos)
+      yPos += 7
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      report.recommendations.forEach((rec) => {
+        if (yPos > 270) {
+          doc.addPage()
+          yPos = 20
+        }
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${rec.title} (${rec.category === 'diet' ? 'Хранене' : rec.category === 'supplement' ? 'Добавка' : 'Начин на живот'})`, margin, yPos)
+        yPos += 4
+        doc.setFont('helvetica', 'normal')
+        const recLines = doc.splitTextToSize(rec.description, pageWidth - 2 * margin - 5)
+        recLines.forEach((line: string) => {
+          if (yPos > 270) {
+            doc.addPage()
+            yPos = 20
+          }
+          doc.text(line, margin + 5, yPos)
+          yPos += 4
+        })
+        yPos += 2
+      })
+
+      if (yPos > 260) {
+        doc.addPage()
+        yPos = 20
+      }
+      yPos += 10
+
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'italic')
+      doc.text('Този доклад е генериран от AI система за иридологичен анализ и не замества професионална медицинска консултация.', pageWidth / 2, yPos, { align: 'center', maxWidth: pageWidth - 2 * margin })
+
+      doc.save(`iridology-report-${new Date().toISOString().split('T')[0]}.pdf`)
+      toast.success('PDF докладът е изтеглен успешно')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Грешка при генериране на PDF')
+    }
   }
 
   const handleShare = () => {

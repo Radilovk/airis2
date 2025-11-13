@@ -74,40 +74,16 @@ function CollapsibleSection({ section }: { section: PlanSection }) {
   const [isOpen, setIsOpen] = useState(false)
   const Icon = section.icon
 
-  const priorityColors = {
-    high: 'text-red-600 bg-red-50 border-red-200',
-    medium: 'text-yellow-600 bg-yellow-50 border-yellow-200',
-    low: 'text-blue-600 bg-blue-50 border-blue-200'
-  }
-
-  const priorityLabels = {
-    high: 'Висок приоритет',
-    medium: 'Среден приоритет',
-    low: 'Нисък приоритет'
-  }
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={cn(
-        "overflow-hidden transition-all border-l-4",
-        section.priority && priorityColors[section.priority],
-        !section.priority && "border-l-primary"
-      )}>
+      <Card className="overflow-hidden transition-all">
         <CollapsibleTrigger className="w-full p-4 flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className={cn(
-              "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
-              section.priority ? priorityColors[section.priority] : "bg-primary/10"
-            )}>
-              <Icon size={18} weight="duotone" className={section.priority ? '' : 'text-primary'} />
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10">
+              <Icon size={18} weight="duotone" className="text-primary" />
             </div>
             <div className="flex-1 min-w-0 text-left">
               <h4 className="font-semibold text-sm">{section.title}</h4>
-              {section.priority && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {priorityLabels[section.priority]}
-                </p>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -161,8 +137,7 @@ function extractPlanSections(report: AnalysisReport): PlanSection[] {
       id: 'recommended-foods',
       title: 'Препоръчителни Храни',
       icon: AppleLogo,
-      content: recommendedFoods,
-      priority: 'high'
+      content: recommendedFoods
     })
   }
 
@@ -172,8 +147,7 @@ function extractPlanSections(report: AnalysisReport): PlanSection[] {
       id: 'avoid-foods',
       title: 'Храни за Избягване',
       icon: WarningCircle,
-      content: avoidFoods,
-      priority: 'high'
+      content: avoidFoods
     })
   }
 
@@ -181,31 +155,9 @@ function extractPlanSections(report: AnalysisReport): PlanSection[] {
   if (supplements.length > 0) {
     sections.push({
       id: 'supplements',
-      title: 'Хранителни Добавки',
+      title: 'Хранителни Добавки - Дозировка и Прием',
       icon: Pill,
-      content: supplements,
-      priority: 'medium'
-    })
-  }
-
-  const dosage = extractDosageRecommendations(report)
-  if (dosage.length > 0) {
-    sections.push({
-      id: 'dosage',
-      title: 'Дозировка и Прием',
-      icon: Flask,
-      content: dosage,
-      priority: 'medium'
-    })
-  }
-
-  const lifestyle = extractLifestyleRecommendations(report)
-  if (lifestyle.length > 0) {
-    sections.push({
-      id: 'lifestyle',
-      title: 'Начин на Живот',
-      icon: Heart,
-      content: lifestyle
+      content: supplements
     })
   }
 
@@ -223,7 +175,7 @@ function extractPlanSections(report: AnalysisReport): PlanSection[] {
   if (special.length > 0) {
     sections.push({
       id: 'special',
-      title: 'Специални Препоръки',
+      title: 'Специални (Индивидуални) Препоръки',
       icon: Leaf,
       content: special
     })
@@ -233,10 +185,9 @@ function extractPlanSections(report: AnalysisReport): PlanSection[] {
   if (tests.length > 0) {
     sections.push({
       id: 'tests',
-      title: 'Препоръчителни Изследвания',
+      title: 'Препоръчителни Конкретни Изследвания',
       icon: Flask,
-      content: tests,
-      priority: 'low'
+      content: tests
     })
   }
 
@@ -323,48 +274,19 @@ function extractSupplementRecommendations(report: AnalysisReport): string[] {
   })
 
   if (supplements.length === 0) {
-    supplements.push('Мултивитамин комплекс - за общо подпомагане')
-    supplements.push('Омега-3 мастни киселини - за сърдечно-съдово здраве')
-    supplements.push('Пробиотици - за чревно здраве')
+    supplements.push('Мултивитамин комплекс - 1 капсула дневно по време на хранене')
+    supplements.push('Омега-3 мастни киселини - 1000-2000мг дневно с храна')
+    supplements.push('Пробиотици - 1 капсула сутрин на гладно')
+  }
+
+  supplements.push('💡 Приемайте хранителни добавки по време на хранене за по-добра абсорбция')
+  supplements.push('💡 Започнете с по-ниски дози и постепенно увеличавайте')
+  
+  if (report.questionnaireData.medications && report.questionnaireData.medications.trim() !== '') {
+    supplements.push('⚠️ Консултирайте се с лекар за взаимодействия с текущите ви медикаменти')
   }
 
   return supplements
-}
-
-function extractDosageRecommendations(report: AnalysisReport): string[] {
-  const dosages: string[] = []
-  
-  const suppRecs = report.recommendations.filter(r => r.category === 'supplement')
-  
-  if (suppRecs.length > 0) {
-    dosages.push('Приемайте хранителни добавки по време на хранене за по-добра абсорбция')
-    dosages.push('Започнете с по-ниски дози и постепенно увеличавайте')
-    dosages.push('Консултирайте се с лекар преди започване на нова добавка')
-  }
-
-  if (report.questionnaireData.medications && report.questionnaireData.medications.trim() !== '') {
-    dosages.push('Внимавайте за потенциални взаимодействия с текущите ви медикаменти')
-  }
-
-  return dosages
-}
-
-function extractLifestyleRecommendations(report: AnalysisReport): string[] {
-  const lifestyle: string[] = []
-  
-  const lifeRecs = report.recommendations.filter(r => r.category === 'lifestyle')
-  
-  lifeRecs.forEach(rec => {
-    lifestyle.push(`${rec.title}: ${rec.description}`)
-  })
-
-  if (lifestyle.length === 0) {
-    lifestyle.push('Редовна физическа активност - 30 минути, 5 дни седмично')
-    lifestyle.push('Практикувайте добра хигиена на съня - лягайте и ставайте по едно и също време')
-    lifestyle.push('Прекарвайте време на открито и на слънце ежедневно')
-  }
-
-  return lifestyle
 }
 
 function extractPsychologicalRecommendations(report: AnalysisReport): string[] {
