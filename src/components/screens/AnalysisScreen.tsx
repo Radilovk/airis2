@@ -131,8 +131,12 @@ export default function AnalysisScreen({
     
     const useCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig?.provider !== 'github-spark'
     const provider = aiConfig?.provider || 'github-spark'
-    const actualModel = aiConfig?.model || 'gpt-4o'
+    const configuredModel = aiConfig?.model || 'gpt-4o'
     const requestDelay = aiConfig?.requestDelay || 60000
+    
+    const actualModel = (provider === 'github-spark' || !useCustomAPI) 
+      ? (configuredModel === 'gpt-4o' || configuredModel === 'gpt-4o-mini' ? configuredModel : 'gpt-4o')
+      : configuredModel
     
     if (useCustomAPI) {
       addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
@@ -166,7 +170,8 @@ export default function AnalysisScreen({
         } else {
           addLog('info', `→ Извикване на GitHub Spark API с модел: ${actualModel}`)
           console.log(`🌟 [SPARK] Извикване на window.spark.llm с модел: ${actualModel}`)
-          response = await window.spark.llm(prompt, actualModel as any, jsonMode)
+          console.log(`🎯 [SPARK] Точен модел параметър: "${actualModel}"`)
+          response = await window.spark.llm(prompt, actualModel as 'gpt-4o' | 'gpt-4o-mini', jsonMode)
         }
         
         if (response && response.length > 0) {
@@ -383,21 +388,30 @@ ${response}
   useEffect(() => {
     if (aiConfig && !analysisStarted) {
       setAnalysisStarted(true)
-      addLog('info', `✓ AI Конфигурация заредена: ${aiConfig.provider} / ${aiConfig.model}`)
+      const modelToUse = (aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey) 
+        ? (aiConfig.model === 'gpt-4o' || aiConfig.model === 'gpt-4o-mini' ? aiConfig.model : 'gpt-4o')
+        : aiConfig.model
+      addLog('info', `✓ AI Конфигурация заредена: ${aiConfig.provider} / ${modelToUse}`)
       console.log('🔧 [CONFIG] AI конфигурация заредена:', aiConfig)
+      console.log('🎯 [CONFIG] Модел който ще се използва:', modelToUse)
       performAnalysis()
     }
   }, [aiConfig, analysisStarted])
 
   const performAnalysis = async () => {
     try {
+      const modelToUse = (aiConfig?.provider === 'github-spark' || !aiConfig?.useCustomKey) 
+        ? (aiConfig?.model === 'gpt-4o' || aiConfig?.model === 'gpt-4o-mini' ? aiConfig?.model : 'gpt-4o')
+        : (aiConfig?.model || 'gpt-4o')
+      
       addLog('info', 'Стартиране на анализ...')
-      addLog('info', `⚙️ AI Настройки: Provider=${aiConfig?.provider || 'github-spark'}, Model=${aiConfig?.model || 'gpt-4o'}, CustomAPI=${aiConfig?.useCustomKey || false}`)
+      addLog('info', `⚙️ AI Настройки: Provider=${aiConfig?.provider || 'github-spark'}, Model=${modelToUse}, CustomAPI=${aiConfig?.useCustomKey || false}`)
       addLog('info', `⚙️ Параметри: Забавяне=${aiConfig?.requestDelay || 60000}ms, Заявки=${aiConfig?.requestCount || 8}`)
       addLog('info', `Данни от въпросник: Възраст ${questionnaireData.age}, Пол ${questionnaireData.gender}`)
       addLog('info', `Здравни цели: ${questionnaireData.goals.join(', ')}`)
       console.log('🚀 [АНАЛИЗ] Стартиране на анализ...')
       console.log('⚙️ [АНАЛИЗ] AI Конфигурация:', aiConfig)
+      console.log('🎯 [АНАЛИЗ] Модел който ще се използва:', modelToUse)
       console.log('📊 [АНАЛИЗ] Данни от въпросник:', questionnaireData)
       
       const requestDelay = aiConfig?.requestDelay || 60000
