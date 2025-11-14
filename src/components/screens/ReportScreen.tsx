@@ -206,10 +206,11 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       margin: 10px 0;
     }
     .food-item {
-      padding: 8px 12px;
-      margin: 5px 0;
-      border-radius: 6px;
+      padding: 10px 15px;
+      margin: 6px 0;
+      border-radius: 8px;
       page-break-inside: avoid;
+      line-height: 1.6;
     }
     .food-item.recommended {
       background: #dcfce7;
@@ -255,6 +256,14 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     }
     li {
       margin-bottom: 5px;
+    }
+    .text-sm {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .text-muted {
+      color: #6b7280;
+      margin-bottom: 12px;
     }
     @media print {
       body {
@@ -374,7 +383,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       <div class="analysis-text">
         ${report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map(paragraph => {
           const cleanParagraph = paragraph.trim()
-          return cleanParagraph ? `<p>${cleanParagraph}</p>` : ''
+          return cleanParagraph ? `<p style="margin-bottom: 15px; line-height: 1.8;">• ${cleanParagraph}</p>` : ''
         }).join('')}
       </div>
     </div>
@@ -385,28 +394,30 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       <h2>Хранителни препоръки</h2>
       
       ${report.detailedPlan.recommendedFoods && report.detailedPlan.recommendedFoods.length > 0 ? `
-        <h3>Препоръчителни храни (топ 3)</h3>
+        <h3>Препоръчителни храни</h3>
+        <p class="text-sm text-muted">Включете тези храни редовно в ежедневното си хранене за оптимална подкрепа на здравето.</p>
         <div class="food-list">
-          ${report.detailedPlan.recommendedFoods.slice(0, 3).map(food => 
-            food ? `<div class="food-item recommended">✓ ${food}</div>` : ''
+          ${report.detailedPlan.recommendedFoods.map((food, idx) => 
+            food ? `<div class="food-item recommended">• ${food}</div>` : ''
           ).filter(item => item).join('')}
         </div>
       ` : ''}
 
       ${report.detailedPlan.avoidFoods && report.detailedPlan.avoidFoods.length > 0 ? `
-        <h3>Храни за избягване (топ 3)</h3>
+        <h3 style="margin-top: 25px;">Храни за избягване</h3>
+        <p class="text-sm text-muted">Ограничете или елиминирайте тези храни от диетата си за подобряване на здравното състояние.</p>
         <div class="food-list">
-          ${report.detailedPlan.avoidFoods.slice(0, 3).map(food => 
-            food ? `<div class="food-item avoid">✗ ${food}</div>` : ''
+          ${report.detailedPlan.avoidFoods.map((food, idx) => 
+            food ? `<div class="food-item avoid">• ${food}</div>` : ''
           ).filter(item => item).join('')}
         </div>
       ` : ''}
 
       ${report.detailedPlan.supplements && report.detailedPlan.supplements.length > 0 ? `
-        <h3>Хранителни добавки (топ 3)</h3>
+        <h3 style="margin-top: 25px;">Хранителни добавки</h3>
         ${report.detailedPlan.supplements.slice(0, 3).map(supp => supp ? `
           <div class="supplement-card">
-            <div class="supplement-name">${supp.name || ''}</div>
+            <div class="supplement-name">• ${supp.name || ''}</div>
             <div class="supplement-details">
               <strong>Дозировка:</strong> ${supp.dosage || ''}<br>
               <strong>Прием:</strong> ${supp.timing || ''}
@@ -417,7 +428,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       ` : ''}
 
       ${report.detailedPlan.generalRecommendations && report.detailedPlan.generalRecommendations.length > 0 ? `
-        <h3>Общи препоръки (топ 3)</h3>
+        <h3 style="margin-top: 25px;">Общи препоръки</h3>
         <ul>
           ${report.detailedPlan.generalRecommendations.slice(0, 3).map(rec => 
             rec ? `<li>${rec}</li>` : ''
@@ -433,7 +444,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
      (report.detailedPlan.recommendedTests && report.detailedPlan.recommendedTests.length > 0)) ? `
     <div class="page">
       ${report.detailedPlan.psychologicalRecommendations && report.detailedPlan.psychologicalRecommendations.length > 0 ? `
-        <h2>Психологически препоръки (топ 3)</h2>
+        <h2>Психологически препоръки</h2>
         <ul>
           ${report.detailedPlan.psychologicalRecommendations.slice(0, 3).map(rec => 
             rec ? `<li>${rec}</li>` : ''
@@ -442,7 +453,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       ` : ''}
 
       ${report.detailedPlan.specialRecommendations && report.detailedPlan.specialRecommendations.length > 0 ? `
-        <h2>Специални препоръки (топ 3)</h2>
+        <h2>Специални препоръки</h2>
         <ul>
           ${report.detailedPlan.specialRecommendations.slice(0, 3).map(rec => 
             rec ? `<li>${rec}</li>` : ''
@@ -451,7 +462,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       ` : ''}
 
       ${report.detailedPlan.recommendedTests && report.detailedPlan.recommendedTests.length > 0 ? `
-        <h2>Препоръчителни изследвания (топ 3)</h2>
+        <h2>Препоръчителни изследвания</h2>
         <ul>
           ${report.detailedPlan.recommendedTests.slice(0, 3).map(test => 
             test ? `<li>${test}</li>` : ''

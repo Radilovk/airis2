@@ -226,19 +226,32 @@ export default function IridologyTab({ report }: IridologyTabProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
         >
-          <Card className="p-5">
-            <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
-              <Eye size={20} weight="duotone" className="text-primary" />
-              Детайлен Иридологичен Анализ
+          <Card className="p-6 border-2">
+            <h3 className="font-bold text-lg mb-5 flex items-center gap-3 pb-3 border-b-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                <Eye size={22} weight="duotone" className="text-primary-foreground" />
+              </div>
+              <span>Детайлен Иридологичен Анализ</span>
             </h3>
-            <div className="prose prose-sm max-w-none">
+            <div className="space-y-4">
               {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
                 const cleanParagraph = paragraph.trim()
-                return cleanParagraph ? (
-                  <p key={idx} className="text-sm leading-relaxed text-foreground/90 mb-3">
-                    {cleanParagraph}
-                  </p>
-                ) : null
+                if (!cleanParagraph) return null
+                
+                return (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.3 }}
+                    className="flex items-start gap-3 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl border"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
+                    <p className="text-sm leading-relaxed text-foreground/90 flex-1">
+                      {cleanParagraph}
+                    </p>
+                  </motion.div>
+                )
               })}
             </div>
           </Card>

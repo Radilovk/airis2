@@ -84,7 +84,7 @@ export default function PlanTab({ report }: PlanTabProps) {
             <CollapsibleSection 
               section={{
                 id: 'general',
-                title: 'Общи Препоръки (топ 3)',
+                title: 'Общи Препоръки',
                 icon: Lightbulb,
                 content: detailedPlan.generalRecommendations.slice(0, 3)
               }} 
@@ -124,7 +124,7 @@ export default function PlanTab({ report }: PlanTabProps) {
             <CollapsibleSection 
               section={{
                 id: 'psychological',
-                title: 'Психологически Препоръки (топ 3)',
+                title: 'Психологически Препоръки',
                 icon: Brain,
                 content: detailedPlan.psychologicalRecommendations.slice(0, 3)
               }} 
@@ -141,7 +141,7 @@ export default function PlanTab({ report }: PlanTabProps) {
             <CollapsibleSection 
               section={{
                 id: 'special',
-                title: 'Специални (Индивидуални) Препоръки (топ 3)',
+                title: 'Специални (Индивидуални) Препоръки',
                 icon: Leaf,
                 content: detailedPlan.specialRecommendations.slice(0, 3)
               }} 
@@ -158,7 +158,7 @@ export default function PlanTab({ report }: PlanTabProps) {
             <CollapsibleSection 
               section={{
                 id: 'tests',
-                title: 'Препоръчителни Конкретни Изследвания (топ 3)',
+                title: 'Препоръчителни Конкретни Изследвания',
                 icon: Flask,
                 content: detailedPlan.recommendedTests.slice(0, 3)
               }} 
@@ -175,22 +175,23 @@ function SupplementsSection({ supplements }: { supplements: SupplementRecommenda
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden transition-all">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors">
+      <Card className="overflow-hidden transition-all border-2 border-primary/20">
+        <CollapsibleTrigger className="w-full p-5 flex items-center justify-between gap-3 hover:bg-primary/5 transition-colors bg-gradient-to-r from-primary/5 to-accent/5">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10">
-              <Pill size={18} weight="duotone" className="text-primary" />
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Pill size={22} weight="duotone" className="text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <h4 className="font-semibold text-sm">Хранителни Добавки - Дозировка и Прием</h4>
+              <h4 className="font-bold text-base">Хранителни Добавки</h4>
+              <p className="text-xs text-muted-foreground">Дозировка и прием</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs font-semibold">
               {supplements.length}
             </Badge>
             <CaretDown 
-              size={18} 
+              size={20} 
               className={cn(
                 "text-muted-foreground transition-transform duration-200",
                 isOpen && "transform rotate-180"
@@ -200,35 +201,40 @@ function SupplementsSection({ supplements }: { supplements: SupplementRecommenda
         </CollapsibleTrigger>
         
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-2 space-y-2.5">
+          <div className="p-5 space-y-3 bg-gradient-to-b from-background to-primary/5">
             {supplements.map((supp, idx) => (
-              <div 
-                key={idx} 
-                className="p-3 bg-muted/30 rounded-lg border space-y-1.5"
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1, duration: 0.3 }}
+                className="p-4 bg-gradient-to-br from-card to-primary/5 rounded-xl border-2 border-primary/10 shadow-sm hover:shadow-md transition-all space-y-2.5"
               >
-                <div className="flex items-start gap-2">
-                  <Pill size={16} weight="duotone" className="text-primary mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Pill size={18} weight="duotone" className="text-primary-foreground" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-semibold text-sm mb-1">{supp.name}</h5>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-start gap-1.5">
-                        <span className="font-medium">Дозировка:</span>
-                        <span>{supp.dosage}</span>
+                    <h5 className="font-bold text-base mb-2 text-primary">{supp.name}</h5>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-start gap-2 p-2 bg-background/80 rounded-lg">
+                        <span className="font-semibold text-foreground min-w-[80px]">• Дозировка:</span>
+                        <span className="text-foreground/80">{supp.dosage}</span>
                       </div>
-                      <div className="flex items-start gap-1.5">
-                        <span className="font-medium">Прием:</span>
-                        <span>{supp.timing}</span>
+                      <div className="flex items-start gap-2 p-2 bg-background/80 rounded-lg">
+                        <span className="font-semibold text-foreground min-w-[80px]">• Прием:</span>
+                        <span className="text-foreground/80">{supp.timing}</span>
                       </div>
                       {supp.notes && (
-                        <div className="flex items-start gap-1.5 mt-1.5 pt-1.5 border-t border-border/50">
-                          <span className="font-medium">Бележка:</span>
-                          <span className="italic">{supp.notes}</span>
+                        <div className="flex items-start gap-2 p-2.5 bg-accent/10 rounded-lg border border-accent/20 mt-2">
+                          <span className="font-semibold text-foreground min-w-[80px]">• Бележка:</span>
+                          <span className="italic text-foreground/80 text-sm leading-relaxed">{supp.notes}</span>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </CollapsibleContent>
@@ -243,22 +249,22 @@ function CollapsibleSection({ section }: { section: PlanSection }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden transition-all">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors">
+      <Card className="overflow-hidden transition-all border-2">
+        <CollapsibleTrigger className="w-full p-5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10">
-              <Icon size={18} weight="duotone" className="text-primary" />
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/15 shadow-sm">
+              <Icon size={22} weight="duotone" className="text-primary" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <h4 className="font-semibold text-sm">{section.title}</h4>
+              <h4 className="font-bold text-base">{section.title}</h4>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs font-semibold">
               {section.content.length}
             </Badge>
             <CaretDown 
-              size={18} 
+              size={20} 
               className={cn(
                 "text-muted-foreground transition-transform duration-200",
                 isOpen && "transform rotate-180"
@@ -268,15 +274,18 @@ function CollapsibleSection({ section }: { section: PlanSection }) {
         </CollapsibleTrigger>
         
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-2 space-y-2">
+          <div className="p-5 space-y-3 bg-gradient-to-b from-background to-muted/10">
             {section.content.map((item, idx) => (
-              <div 
-                key={idx} 
-                className="flex items-start gap-2.5 p-3 bg-muted/30 rounded-lg border"
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.08, duration: 0.25 }}
+                className="flex items-start gap-3 p-4 bg-card rounded-xl border-2 border-border/50 hover:border-primary/30 hover:shadow-md transition-all"
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                <p className="text-sm leading-relaxed">{item}</p>
-              </div>
+                <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
+                <p className="text-sm leading-relaxed flex-1">{item}</p>
+              </motion.div>
             ))}
           </div>
         </CollapsibleContent>
@@ -294,76 +303,113 @@ function FoodRecommendationsSection({
 }) {
   const [isOpen, setIsOpen] = useState(true)
   
-  const topRecommended = (recommendedFoods || []).slice(0, 3)
-  const topAvoid = (avoidFoods || []).slice(0, 3)
+  const allRecommended = recommendedFoods || []
+  const allAvoid = avoidFoods || []
   
-  if (topRecommended.length === 0 && topAvoid.length === 0) {
+  if (allRecommended.length === 0 && allAvoid.length === 0) {
     return null
   }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden transition-all">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between gap-3 hover:bg-muted/50 transition-colors">
+      <Card className="overflow-hidden transition-all border-2">
+        <CollapsibleTrigger className="w-full p-5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors bg-gradient-to-r from-green-50/50 to-red-50/50">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10">
-              <AppleLogo size={18} weight="duotone" className="text-primary" />
+            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+              <AppleLogo size={22} weight="duotone" className="text-white" />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <h4 className="font-semibold text-sm">Хранителни Препоръки</h4>
-              <p className="text-xs text-muted-foreground">Препоръчителни и забранени храни</p>
+              <h4 className="font-bold text-base">Хранителни Препоръки</h4>
+              <p className="text-xs text-muted-foreground">Пълен списък с препоръчителни и забранени храни</p>
             </div>
           </div>
-          <CaretDown 
-            size={18} 
-            className={cn(
-              "text-muted-foreground transition-transform duration-200",
-              isOpen && "transform rotate-180"
-            )}
-          />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge variant="secondary" className="text-xs font-semibold">
+              {allRecommended.length + allAvoid.length}
+            </Badge>
+            <CaretDown 
+              size={20} 
+              className={cn(
+                "text-muted-foreground transition-transform duration-200",
+                isOpen && "transform rotate-180"
+              )}
+            />
+          </div>
         </CollapsibleTrigger>
         
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-2 space-y-4">
-            {topRecommended.length > 0 && (
+          <div className="p-5 space-y-6 bg-gradient-to-b from-background to-muted/20">
+            {allRecommended.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle size={16} weight="fill" className="text-green-700" />
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-green-200">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <CheckCircle size={20} weight="fill" className="text-white" />
                   </div>
-                  <h5 className="font-semibold text-sm text-green-900">Препоръчителни Храни (топ 3)</h5>
+                  <div>
+                    <h5 className="font-bold text-base text-green-900">Препоръчителни Храни</h5>
+                    <p className="text-xs text-green-700">Включете ги редовно в храненето си</p>
+                  </div>
+                  <Badge variant="outline" className="ml-auto text-green-700 border-green-300 bg-green-50">
+                    {allRecommended.length} храни
+                  </Badge>
                 </div>
-                <div className="space-y-2">
-                  {topRecommended.map((food, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-start gap-2.5 p-3 bg-green-50 rounded-lg border border-green-200"
+                <div className="grid gap-2.5">
+                  {allRecommended.map((food, idx) => (
+                    <motion.div 
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03, duration: 0.2 }}
+                      className="group flex items-start gap-3 p-3.5 bg-gradient-to-r from-green-50 to-emerald-50/50 rounded-xl border border-green-200 hover:border-green-300 hover:shadow-md transition-all"
                     >
-                      <CheckCircle size={18} weight="fill" className="text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-green-900 leading-relaxed">{food}</span>
-                    </div>
+                      <div className="w-6 h-6 rounded-lg bg-green-500 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                        <CheckCircle size={16} weight="fill" className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-green-900 leading-relaxed block">{food}</span>
+                      </div>
+                      <div className="text-xs font-semibold text-green-600 flex-shrink-0 px-2 py-0.5 bg-green-100 rounded-full">
+                        #{idx + 1}
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
             )}
             
-            {topAvoid.length > 0 && (
+            {allAvoid.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <XCircle size={16} weight="fill" className="text-red-700" />
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b-2 border-red-200">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <XCircle size={20} weight="fill" className="text-white" />
                   </div>
-                  <h5 className="font-semibold text-sm text-red-900">Храни за Избягване (топ 3)</h5>
+                  <div>
+                    <h5 className="font-bold text-base text-red-900">Храни за Избягване</h5>
+                    <p className="text-xs text-red-700">Ограничете или елиминирайте от диетата</p>
+                  </div>
+                  <Badge variant="outline" className="ml-auto text-red-700 border-red-300 bg-red-50">
+                    {allAvoid.length} храни
+                  </Badge>
                 </div>
-                <div className="space-y-2">
-                  {topAvoid.map((food, idx) => (
-                    <div 
-                      key={idx} 
-                      className="flex items-start gap-2.5 p-3 bg-red-50 rounded-lg border border-red-200"
+                <div className="grid gap-2.5">
+                  {allAvoid.map((food, idx) => (
+                    <motion.div 
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03, duration: 0.2 }}
+                      className="group flex items-start gap-3 p-3.5 bg-gradient-to-r from-red-50 to-rose-50/50 rounded-xl border border-red-200 hover:border-red-300 hover:shadow-md transition-all"
                     >
-                      <XCircle size={18} weight="fill" className="text-red-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-red-900 leading-relaxed">{food}</span>
-                    </div>
+                      <div className="w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                        <XCircle size={16} weight="fill" className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium text-red-900 leading-relaxed block">{food}</span>
+                      </div>
+                      <div className="text-xs font-semibold text-red-600 flex-shrink-0 px-2 py-0.5 bg-red-100 rounded-full">
+                        #{idx + 1}
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>

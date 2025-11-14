@@ -96,16 +96,22 @@ export default function OverviewTab({ report, avgHealth }: OverviewTabProps) {
               </p>
             </div>
 
-            <div className="prose prose-sm max-w-none">
+            <div className="space-y-3">
               {report.briefSummary ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {report.briefSummary.split(/\n/).filter(line => line.trim()).map((point, idx) => {
                     const cleanPoint = point.replace(/^•\s*/, '').trim()
                     return cleanPoint ? (
-                      <div key={idx} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        <p className="text-sm leading-relaxed text-foreground/90">{cleanPoint}</p>
-                      </div>
+                      <motion.div 
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.08, duration: 0.25 }}
+                        className="flex items-start gap-3 p-3 bg-gradient-to-r from-primary/5 to-primary/0 rounded-lg border border-primary/10"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
+                        <p className="text-sm leading-relaxed text-foreground/90 flex-1">{cleanPoint}</p>
+                      </motion.div>
                     ) : null
                   })}
                 </div>
