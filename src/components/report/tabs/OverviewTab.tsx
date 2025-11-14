@@ -99,16 +99,23 @@ export default function OverviewTab({ report, avgHealth }: OverviewTabProps) {
             <div className="prose prose-sm max-w-none">
               {report.briefSummary ? (
                 <div className="space-y-2">
-                  {report.briefSummary.split('\n').filter(line => line.trim()).map((point, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                      <p className="text-sm leading-relaxed text-foreground/90">{point.replace(/^•\s*/, '')}</p>
-                    </div>
-                  ))}
+                  {report.briefSummary.split(/\n/).filter(line => line.trim()).map((point, idx) => {
+                    const cleanPoint = point.replace(/^•\s*/, '').trim()
+                    return cleanPoint ? (
+                      <div key={idx} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                        <p className="text-sm leading-relaxed text-foreground/90">{cleanPoint}</p>
+                      </div>
+                    ) : null
+                  })}
                 </div>
-              ) : (
+              ) : report.summary ? (
                 <p className="text-sm leading-relaxed text-foreground/90">
                   {report.summary.substring(0, 300)}...
+                </p>
+              ) : (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Резюме не е налично
                 </p>
               )}
             </div>
@@ -253,11 +260,15 @@ function getSupportingFactors(report: AnalysisReport): string[] {
   const factors: string[] = []
   const avgHealth = (report.leftIris.overallHealth + report.rightIris.overallHealth) / 2
 
-  const nervousSystemScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('нервна'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('нервна')).length)
+  const leftSystemScores = report.leftIris?.systemScores || []
+  const rightSystemScores = report.rightIris?.systemScores || []
+  
+  const nervousSystemScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('нервна'))
+  
+  const nervousSystemScore = nervousSystemScores.length > 0
+    ? nervousSystemScores.reduce((sum, s) => sum + s.score, 0) / nervousSystemScores.length
+    : 70
 
   if (report.questionnaireData.sleepHours >= 7 && 
      (report.questionnaireData.sleepQuality === 'good' || report.questionnaireData.sleepQuality === 'excellent') &&
@@ -307,11 +318,12 @@ function getSupportingFactors(report: AnalysisReport): string[] {
     factors.push('Здравословен хранителен профил с добра храносмилателна система')
   }
 
-  const immuneScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('имунна'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('имунна')).length)
+  const immuneScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('имунна'))
+  
+  const immuneScore = immuneScores.length > 0
+    ? immuneScores.reduce((sum, s) => sum + s.score, 0) / immuneScores.length
+    : 70
 
   if (immuneScore >= 75) {
     factors.push('Силна имунна система според иридологичния анализ')
@@ -330,32 +342,38 @@ function getSupportingFactors(report: AnalysisReport): string[] {
 function getLimitingFactors(report: AnalysisReport): string[] {
   const factors: string[] = []
 
-  const nervousSystemScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('нервна'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('нервна')).length)
+  const leftSystemScores = report.leftIris?.systemScores || []
+  const rightSystemScores = report.rightIris?.systemScores || []
+  
+  const nervousSystemScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('нервна'))
+  
+  const nervousSystemScore = nervousSystemScores.length > 0
+    ? nervousSystemScores.reduce((sum, s) => sum + s.score, 0) / nervousSystemScores.length
+    : 70
 
   if ((report.questionnaireData.sleepHours < 6 || report.questionnaireData.sleepQuality === 'poor') &&
       nervousSystemScore < 60) {
     factors.push('Недостатъчен или лошо качество сън с отражение върху нервната система')
   }
 
-  const detoxSystemScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('детоксикац'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('детоксикац')).length)
+  const detoxSystemScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('детоксикац'))
+  
+  const detoxSystemScore = detoxSystemScores.length > 0
+    ? detoxSystemScores.reduce((sum, s) => sum + s.score, 0) / detoxSystemScores.length
+    : 70
 
   if (report.questionnaireData.hydration < 1.5 && detoxSystemScore < 65) {
     factors.push('Недостатъчна хидратация влошаваща детоксикацията')
   }
 
-  const cardiovascularScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('сърдечно') || s.system.toLowerCase().includes('съдова'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('сърдечно') || s.system.toLowerCase().includes('съдова')).length)
+  const cardiovascularScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('сърдечно') || s?.system?.toLowerCase().includes('съдова'))
+  
+  const cardiovascularScore = cardiovascularScores.length > 0
+    ? cardiovascularScores.reduce((sum, s) => sum + s.score, 0) / cardiovascularScores.length
+    : 70
 
   if (report.questionnaireData.activityLevel === 'sedentary' && cardiovascularScore < 70) {
     factors.push('Ниска физическа активност с отражение върху сърдечно-съдовата система')
@@ -366,17 +384,20 @@ function getLimitingFactors(report: AnalysisReport): string[] {
     factors.push('Висок стрес влошаващ състоянието на нервната система')
   }
 
-  const concernZones = report.leftIris.zones.filter(z => z.status === 'concern').length + 
-                       report.rightIris.zones.filter(z => z.status === 'concern').length
+  const leftZones = report.leftIris?.zones || []
+  const rightZones = report.rightIris?.zones || []
+  const concernZones = leftZones.filter(z => z?.status === 'concern').length + 
+                       rightZones.filter(z => z?.status === 'concern').length
   if (concernZones > 3) {
     factors.push(`${concernZones} зони с притеснения според иридологичния анализ`)
   }
 
-  const digestiveScore = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-    .filter(s => s.system.toLowerCase().includes('храносмил'))
-    .reduce((sum, s) => sum + s.score, 0) / 
-    Math.max(1, [...report.leftIris.systemScores, ...report.rightIris.systemScores]
-      .filter(s => s.system.toLowerCase().includes('храносмил')).length)
+  const digestiveScores = [...leftSystemScores, ...rightSystemScores]
+    .filter(s => s?.system?.toLowerCase().includes('храносмил'))
+  
+  const digestiveScore = digestiveScores.length > 0
+    ? digestiveScores.reduce((sum, s) => sum + s.score, 0) / digestiveScores.length
+    : 70
 
   if ((report.questionnaireData.dietaryHabits.includes('Бърза храна') || 
        report.questionnaireData.dietaryHabits.includes('Много сладки храни')) &&
@@ -389,17 +410,19 @@ function getLimitingFactors(report: AnalysisReport): string[] {
     factors.push('Общо ниско здравословно състояние според иридологичния анализ')
   }
 
-  const attentionZones = report.leftIris.zones.filter(z => z.status === 'attention').length + 
-                         report.rightIris.zones.filter(z => z.status === 'attention').length
+  const attentionZones = leftZones.filter(z => z?.status === 'attention').length + 
+                         rightZones.filter(z => z?.status === 'attention').length
   if (attentionZones > 5) {
     factors.push(`${attentionZones} зони изискващи внимание според иридологичния анализ`)
   }
 
-  const allSystemScores = [...report.leftIris.systemScores, ...report.rightIris.systemScores]
+  const allSystemScores = [...leftSystemScores, ...rightSystemScores]
   const systemAverages = new Map<string, number[]>()
   allSystemScores.forEach(s => {
-    const current = systemAverages.get(s.system) || []
-    systemAverages.set(s.system, [...current, s.score])
+    if (s?.system && typeof s.score === 'number') {
+      const current = systemAverages.get(s.system) || []
+      systemAverages.set(s.system, [...current, s.score])
+    }
   })
   const weakSystems = Array.from(systemAverages.entries())
     .map(([system, scores]) => ({

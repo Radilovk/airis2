@@ -16,6 +16,7 @@ import type { AnalysisReport } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import PlanTab from '@/components/report/tabs/PlanTab'
+import ErrorBoundary from '@/components/ErrorFallback'
 
 interface ReportScreenProps {
   report: AnalysisReport
@@ -35,8 +36,10 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       }
 
       const bmi = (report.questionnaireData.weight / ((report.questionnaireData.height / 100) ** 2)).toFixed(1)
-      const concernZones = report.leftIris.zones.filter(z => z.status !== 'normal').length + 
-                          report.rightIris.zones.filter(z => z.status !== 'normal').length
+      const leftZones = report.leftIris?.zones || []
+      const rightZones = report.rightIris?.zones || []
+      const concernZones = leftZones.filter(z => z?.status && z.status !== 'normal').length + 
+                          rightZones.filter(z => z?.status && z.status !== 'normal').length
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -309,9 +312,10 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     
     ${report.briefSummary ? `
       <div class="summary-box">
-        ${report.briefSummary.split('\n').filter(line => line.trim()).map(point => 
-          `<p>• ${point.replace(/^•\s*/, '')}</p>`
-        ).join('')}
+        ${report.briefSummary.split(/\n/).filter(line => line.trim()).map(point => {
+          const cleanPoint = point.replace(/^•\s*/, '').trim()
+          return cleanPoint ? `<p>• ${cleanPoint}</p>` : ''
+        }).join('')}
       </div>
     ` : ''}
 
@@ -327,38 +331,38 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
         <span class="info-label">Зони за внимание:</span> ${concernZones}
       </div>
       <div class="info-item">
-        <span class="info-label">Артефакти:</span> ${report.leftIris.artifacts.length + report.rightIris.artifacts.length}
+        <span class="info-label">Артефакти:</span> ${(report.leftIris?.artifacts?.length || 0) + (report.rightIris?.artifacts?.length || 0)}
       </div>
     </div>
   </div>
 
   <div class="page">
     <h2>Иридологични находки - Ляв ирис</h2>
-    ${report.leftIris.zones.filter(z => z.status !== 'normal').length > 0 ? `
-      ${report.leftIris.zones.filter(z => z.status !== 'normal').map(zone => `
+    ${leftZones.filter(z => z && z.status !== 'normal').length > 0 ? `
+      ${leftZones.filter(z => z && z.status !== 'normal').map(zone => `
         <div class="zone-card ${zone.status}">
           <div class="zone-header">
-            ${zone.name} (${zone.organ})
+            ${zone.name || ''} (${zone.organ || ''})
             <span class="zone-status ${zone.status}">
               ${zone.status === 'attention' ? 'Внимание' : 'Притеснение'}
             </span>
           </div>
-          <p>${zone.findings}</p>
+          <p>${zone.findings || ''}</p>
         </div>
       `).join('')}
     ` : '<p>Всички зони са в норма</p>'}
 
     <h2>Иридологични находки - Десен ирис</h2>
-    ${report.rightIris.zones.filter(z => z.status !== 'normal').length > 0 ? `
-      ${report.rightIris.zones.filter(z => z.status !== 'normal').map(zone => `
+    ${rightZones.filter(z => z && z.status !== 'normal').length > 0 ? `
+      ${rightZones.filter(z => z && z.status !== 'normal').map(zone => `
         <div class="zone-card ${zone.status}">
           <div class="zone-header">
-            ${zone.name} (${zone.organ})
+            ${zone.name || ''} (${zone.organ || ''})
             <span class="zone-status ${zone.status}">
               ${zone.status === 'attention' ? 'Внимание' : 'Притеснение'}
             </span>
           </div>
-          <p>${zone.findings}</p>
+          <p>${zone.findings || ''}</p>
         </div>
       `).join('')}
     ` : '<p>Всички зони са в норма</p>'}
@@ -368,9 +372,10 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     <div class="page">
       <h2>Детайлен иридологичен анализ</h2>
       <div class="analysis-text">
-        ${report.detailedAnalysis.split('\n\n').map(paragraph => 
-          `<p>${paragraph.trim()}</p>`
-        ).join('')}
+        ${report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map(paragraph => {
+          const cleanParagraph = paragraph.trim()
+          return cleanParagraph ? `<p>${cleanParagraph}</p>` : ''
+        }).join('')}
       </div>
     </div>
   ` : ''}
@@ -379,77 +384,78 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     <div class="page">
       <h2>Хранителни препоръки</h2>
       
-      ${report.detailedPlan.recommendedFoods.length > 0 ? `
+      ${report.detailedPlan.recommendedFoods && report.detailedPlan.recommendedFoods.length > 0 ? `
         <h3>Препоръчителни храни (топ 3)</h3>
         <div class="food-list">
           ${report.detailedPlan.recommendedFoods.slice(0, 3).map(food => 
-            `<div class="food-item recommended">✓ ${food}</div>`
-          ).join('')}
+            food ? `<div class="food-item recommended">✓ ${food}</div>` : ''
+          ).filter(item => item).join('')}
         </div>
       ` : ''}
 
-      ${report.detailedPlan.avoidFoods.length > 0 ? `
+      ${report.detailedPlan.avoidFoods && report.detailedPlan.avoidFoods.length > 0 ? `
         <h3>Храни за избягване (топ 3)</h3>
         <div class="food-list">
           ${report.detailedPlan.avoidFoods.slice(0, 3).map(food => 
-            `<div class="food-item avoid">✗ ${food}</div>`
-          ).join('')}
+            food ? `<div class="food-item avoid">✗ ${food}</div>` : ''
+          ).filter(item => item).join('')}
         </div>
       ` : ''}
 
-      ${report.detailedPlan.supplements.length > 0 ? `
+      ${report.detailedPlan.supplements && report.detailedPlan.supplements.length > 0 ? `
         <h3>Хранителни добавки (топ 3)</h3>
-        ${report.detailedPlan.supplements.slice(0, 3).map(supp => `
+        ${report.detailedPlan.supplements.slice(0, 3).map(supp => supp ? `
           <div class="supplement-card">
-            <div class="supplement-name">${supp.name}</div>
+            <div class="supplement-name">${supp.name || ''}</div>
             <div class="supplement-details">
-              <strong>Дозировка:</strong> ${supp.dosage}<br>
-              <strong>Прием:</strong> ${supp.timing}
+              <strong>Дозировка:</strong> ${supp.dosage || ''}<br>
+              <strong>Прием:</strong> ${supp.timing || ''}
               ${supp.notes ? `<br><strong>Бележка:</strong> ${supp.notes}` : ''}
             </div>
           </div>
-        `).join('')}
+        ` : '').filter(item => item).join('')}
       ` : ''}
 
-      ${report.detailedPlan.generalRecommendations.length > 0 ? `
+      ${report.detailedPlan.generalRecommendations && report.detailedPlan.generalRecommendations.length > 0 ? `
         <h3>Общи препоръки (топ 3)</h3>
         <ul>
           ${report.detailedPlan.generalRecommendations.slice(0, 3).map(rec => 
-            `<li>${rec}</li>`
-          ).join('')}
+            rec ? `<li>${rec}</li>` : ''
+          ).filter(item => item).join('')}
         </ul>
       ` : ''}
     </div>
   ` : ''}
 
-  ${report.detailedPlan && (report.detailedPlan.psychologicalRecommendations.length > 0 || 
-     report.detailedPlan.specialRecommendations.length > 0 || 
-     report.detailedPlan.recommendedTests.length > 0) ? `
+  ${report.detailedPlan && (
+     (report.detailedPlan.psychologicalRecommendations && report.detailedPlan.psychologicalRecommendations.length > 0) || 
+     (report.detailedPlan.specialRecommendations && report.detailedPlan.specialRecommendations.length > 0) || 
+     (report.detailedPlan.recommendedTests && report.detailedPlan.recommendedTests.length > 0)) ? `
     <div class="page">
-      ${report.detailedPlan.psychologicalRecommendations.length > 0 ? `
+      ${report.detailedPlan.psychologicalRecommendations && report.detailedPlan.psychologicalRecommendations.length > 0 ? `
         <h2>Психологически препоръки (топ 3)</h2>
         <ul>
           ${report.detailedPlan.psychologicalRecommendations.slice(0, 3).map(rec => 
-            `<li>${rec}</li>`
-          ).join('')}
+            rec ? `<li>${rec}</li>` : ''
+          ).filter(item => item).join('')}
         </ul>
       ` : ''}
 
-      ${report.detailedPlan.specialRecommendations.length > 0 ? `
+      ${report.detailedPlan.specialRecommendations && report.detailedPlan.specialRecommendations.length > 0 ? `
         <h2>Специални препоръки (топ 3)</h2>
         <ul>
           ${report.detailedPlan.specialRecommendations.slice(0, 3).map(rec => 
-            `<li>${rec}</li>`
-          ).join('')}
+            rec ? `<li>${rec}</li>` : ''
+          ).filter(item => item).join('')}
         </ul>
       ` : ''}
 
-      ${report.detailedPlan.recommendedTests.length > 0 ? `
+      ${report.detailedPlan.recommendedTests && report.detailedPlan.recommendedTests.length > 0 ? `
         <h2>Препоръчителни изследвания (топ 3)</h2>
         <ul>
           ${report.detailedPlan.recommendedTests.slice(0, 3).map(test => 
-            `<li>${test}</li>`
-          ).join('')}
+            test ? `<li>${test}</li>` : ''
+          ).filter(item => item).join('')}
         </ul>
       ` : ''}
     </div>
@@ -610,15 +616,21 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            <OverviewTab report={report} avgHealth={avgHealth} />
+            <ErrorBoundary>
+              <OverviewTab report={report} avgHealth={avgHealth} />
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="iridology" className="mt-6">
-            <IridologyTab report={report} />
+            <ErrorBoundary>
+              <IridologyTab report={report} />
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="plan" className="mt-6">
-            <PlanTab report={report} />
+            <ErrorBoundary>
+              <PlanTab report={report} />
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>

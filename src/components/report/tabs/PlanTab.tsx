@@ -45,6 +45,14 @@ export default function PlanTab({ report }: PlanTabProps) {
   }
 
   const { detailedPlan, motivationalSummary } = report
+  
+  const hasGeneralRecs = detailedPlan.generalRecommendations && detailedPlan.generalRecommendations.length > 0
+  const hasFoodRecs = (detailedPlan.recommendedFoods && detailedPlan.recommendedFoods.length > 0) || 
+                      (detailedPlan.avoidFoods && detailedPlan.avoidFoods.length > 0)
+  const hasSupplements = detailedPlan.supplements && detailedPlan.supplements.length > 0
+  const hasPsychRecs = detailedPlan.psychologicalRecommendations && detailedPlan.psychologicalRecommendations.length > 0
+  const hasSpecialRecs = detailedPlan.specialRecommendations && detailedPlan.specialRecommendations.length > 0
+  const hasTests = detailedPlan.recommendedTests && detailedPlan.recommendedTests.length > 0
 
   return (
     <div className="space-y-3">
@@ -67,7 +75,7 @@ export default function PlanTab({ report }: PlanTabProps) {
       )}
 
       <div className="space-y-2.5">
-        {detailedPlan.generalRecommendations.length > 0 && (
+        {hasGeneralRecs && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -84,20 +92,20 @@ export default function PlanTab({ report }: PlanTabProps) {
           </motion.div>
         )}
 
-        {(detailedPlan.recommendedFoods.length > 0 || detailedPlan.avoidFoods.length > 0) && (
+        {hasFoodRecs && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
             <FoodRecommendationsSection 
-              recommendedFoods={detailedPlan.recommendedFoods}
-              avoidFoods={detailedPlan.avoidFoods}
+              recommendedFoods={detailedPlan.recommendedFoods || []}
+              avoidFoods={detailedPlan.avoidFoods || []}
             />
           </motion.div>
         )}
 
-        {detailedPlan.supplements.length > 0 && (
+        {hasSupplements && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -107,7 +115,7 @@ export default function PlanTab({ report }: PlanTabProps) {
           </motion.div>
         )}
 
-        {detailedPlan.psychologicalRecommendations.length > 0 && (
+        {hasPsychRecs && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -124,7 +132,7 @@ export default function PlanTab({ report }: PlanTabProps) {
           </motion.div>
         )}
 
-        {detailedPlan.specialRecommendations.length > 0 && (
+        {hasSpecialRecs && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -141,7 +149,7 @@ export default function PlanTab({ report }: PlanTabProps) {
           </motion.div>
         )}
 
-        {detailedPlan.recommendedTests.length > 0 && (
+        {hasTests && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -286,8 +294,12 @@ function FoodRecommendationsSection({
 }) {
   const [isOpen, setIsOpen] = useState(true)
   
-  const topRecommended = recommendedFoods.slice(0, 3)
-  const topAvoid = avoidFoods.slice(0, 3)
+  const topRecommended = (recommendedFoods || []).slice(0, 3)
+  const topAvoid = (avoidFoods || []).slice(0, 3)
+  
+  if (topRecommended.length === 0 && topAvoid.length === 0) {
+    return null
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

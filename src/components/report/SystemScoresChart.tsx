@@ -7,15 +7,23 @@ interface SystemScoresChartProps {
 }
 
 export default function SystemScoresChart({ leftScores, rightScores }: SystemScoresChartProps) {
+  if (!leftScores || !Array.isArray(leftScores) || leftScores.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground text-sm">
+        Системни оценки не са налични
+      </div>
+    )
+  }
+
   const mergedData = leftScores.map((leftScore, idx) => {
-    const rightScore = rightScores[idx]
+    const rightScore = rightScores?.[idx]
     return {
-      system: leftScore.system,
-      left: leftScore.score,
+      system: leftScore?.system || 'Неизвестна система',
+      left: leftScore?.score || 0,
       right: rightScore?.score || 0,
-      average: Math.round((leftScore.score + (rightScore?.score || 0)) / 2)
+      average: Math.round(((leftScore?.score || 0) + (rightScore?.score || 0)) / 2)
     }
-  })
+  }).filter(item => item.system !== 'Неизвестна система')
 
   return (
     <div className="space-y-6">

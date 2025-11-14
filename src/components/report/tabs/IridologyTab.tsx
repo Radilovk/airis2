@@ -84,21 +84,21 @@ export default function IridologyTab({ report }: IridologyTabProps) {
             <Card className="p-5">
               <h3 className="font-semibold text-sm mb-3">Иридологични Зони</h3>
               <div className="space-y-3">
-                {report.leftIris.zones
-                  .filter(zone => zone.status !== 'normal')
+                {(report.leftIris?.zones || [])
+                  .filter(zone => zone && zone.status !== 'normal')
                   .map((zone) => (
                     <div key={zone.id} className="border rounded-lg p-3 bg-card">
                       <div className="flex items-start justify-between mb-2 gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm">{zone.name}</h4>
-                          <p className="text-xs text-muted-foreground">{zone.organ}</p>
+                          <h4 className="font-semibold text-sm">{zone.name || ''}</h4>
+                          <p className="text-xs text-muted-foreground">{zone.organ || ''}</p>
                         </div>
                         {getStatusBadge(zone.status)}
                       </div>
-                      <p className="text-xs leading-relaxed mt-2 text-foreground/90">{zone.findings}</p>
+                      <p className="text-xs leading-relaxed mt-2 text-foreground/90">{zone.findings || ''}</p>
                     </div>
                   ))}
-                {report.leftIris.zones.filter(zone => zone.status !== 'normal').length === 0 && (
+                {(report.leftIris?.zones || []).filter(zone => zone && zone.status !== 'normal').length === 0 && (
                   <div className="text-center py-8">
                     <CheckCircle size={32} weight="duotone" className="text-green-600 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Всички зони са в норма</p>
@@ -108,7 +108,7 @@ export default function IridologyTab({ report }: IridologyTabProps) {
             </Card>
           </motion.div>
 
-          {report.leftIris.artifacts.length > 0 && (
+          {report.leftIris?.artifacts && report.leftIris.artifacts.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -117,13 +117,13 @@ export default function IridologyTab({ report }: IridologyTabProps) {
               <Card className="p-5">
                 <h3 className="font-semibold text-sm mb-3">Артефакти</h3>
                 <div className="space-y-2.5">
-                  {report.leftIris.artifacts.map((artifact, idx) => (
+                  {report.leftIris.artifacts.map((artifact, idx) => artifact && (
                     <div key={idx} className="flex items-start gap-2.5 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
                       <Warning size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-yellow-900">{artifact.type}</p>
-                        <p className="text-xs text-yellow-700 mt-0.5">{artifact.location}</p>
-                        <p className="text-xs mt-1.5 text-yellow-800">{artifact.description}</p>
+                        <p className="font-medium text-sm text-yellow-900">{artifact.type || ''}</p>
+                        <p className="text-xs text-yellow-700 mt-0.5">{artifact.location || ''}</p>
+                        <p className="text-xs mt-1.5 text-yellow-800">{artifact.description || ''}</p>
                       </div>
                     </div>
                   ))}
@@ -170,21 +170,21 @@ export default function IridologyTab({ report }: IridologyTabProps) {
             <Card className="p-5">
               <h3 className="font-semibold text-sm mb-3">Иридологични Зони</h3>
               <div className="space-y-3">
-                {report.rightIris.zones
-                  .filter(zone => zone.status !== 'normal')
+                {(report.rightIris?.zones || [])
+                  .filter(zone => zone && zone.status !== 'normal')
                   .map((zone) => (
                     <div key={zone.id} className="border rounded-lg p-3 bg-card">
                       <div className="flex items-start justify-between mb-2 gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm">{zone.name}</h4>
-                          <p className="text-xs text-muted-foreground">{zone.organ}</p>
+                          <h4 className="font-semibold text-sm">{zone.name || ''}</h4>
+                          <p className="text-xs text-muted-foreground">{zone.organ || ''}</p>
                         </div>
                         {getStatusBadge(zone.status)}
                       </div>
-                      <p className="text-xs leading-relaxed mt-2 text-foreground/90">{zone.findings}</p>
+                      <p className="text-xs leading-relaxed mt-2 text-foreground/90">{zone.findings || ''}</p>
                     </div>
                   ))}
-                {report.rightIris.zones.filter(zone => zone.status !== 'normal').length === 0 && (
+                {(report.rightIris?.zones || []).filter(zone => zone && zone.status !== 'normal').length === 0 && (
                   <div className="text-center py-8">
                     <CheckCircle size={32} weight="duotone" className="text-green-600 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Всички зони са в норма</p>
@@ -194,7 +194,7 @@ export default function IridologyTab({ report }: IridologyTabProps) {
             </Card>
           </motion.div>
 
-          {report.rightIris.artifacts.length > 0 && (
+          {report.rightIris?.artifacts && report.rightIris.artifacts.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -203,13 +203,13 @@ export default function IridologyTab({ report }: IridologyTabProps) {
               <Card className="p-5">
                 <h3 className="font-semibold text-sm mb-3">Артефакти</h3>
                 <div className="space-y-2.5">
-                  {report.rightIris.artifacts.map((artifact, idx) => (
+                  {report.rightIris.artifacts.map((artifact, idx) => artifact && (
                     <div key={idx} className="flex items-start gap-2.5 p-3 bg-yellow-50 border border-yellow-100 rounded-lg">
                       <Warning size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-yellow-900">{artifact.type}</p>
-                        <p className="text-xs text-yellow-700 mt-0.5">{artifact.location}</p>
-                        <p className="text-xs mt-1.5 text-yellow-800">{artifact.description}</p>
+                        <p className="font-medium text-sm text-yellow-900">{artifact.type || ''}</p>
+                        <p className="text-xs text-yellow-700 mt-0.5">{artifact.location || ''}</p>
+                        <p className="text-xs mt-1.5 text-yellow-800">{artifact.description || ''}</p>
                       </div>
                     </div>
                   ))}
@@ -232,11 +232,14 @@ export default function IridologyTab({ report }: IridologyTabProps) {
               Детайлен Иридологичен Анализ
             </h3>
             <div className="prose prose-sm max-w-none">
-              {report.detailedAnalysis.split('\n\n').map((paragraph, idx) => (
-                <p key={idx} className="text-sm leading-relaxed text-foreground/90 mb-3">
-                  {paragraph}
-                </p>
-              ))}
+              {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
+                const cleanParagraph = paragraph.trim()
+                return cleanParagraph ? (
+                  <p key={idx} className="text-sm leading-relaxed text-foreground/90 mb-3">
+                    {cleanParagraph}
+                  </p>
+                ) : null
+              })}
             </div>
           </Card>
         </motion.div>
