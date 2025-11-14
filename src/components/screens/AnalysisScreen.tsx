@@ -39,7 +39,7 @@ export default function AnalysisScreen({
     model: 'gpt-4o',
     apiKey: '',
     useCustomKey: false,
-    requestDelay: 30000,
+    requestDelay: 60000,
     requestCount: 8
   })
 
@@ -124,14 +124,14 @@ export default function AnalysisScreen({
   const callLLMWithRetry = async (
     prompt: string,
     jsonMode: boolean = true,
-    maxRetries: number = 3
+    maxRetries: number = 2
   ): Promise<string> => {
     let lastError: Error | null = null
     
     const useCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig?.provider !== 'github-spark'
     const provider = aiConfig?.provider || 'github-spark'
     const actualModel = aiConfig?.model || 'gpt-4o'
-    const requestDelay = aiConfig?.requestDelay || 30000
+    const requestDelay = aiConfig?.requestDelay || 60000
     
     if (useCustomAPI) {
       addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
@@ -142,7 +142,7 @@ export default function AnalysisScreen({
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          const waitTime = useCustomAPI ? Math.min(requestDelay, 10000) : Math.min(requestDelay * attempt, 120000)
+          const waitTime = useCustomAPI ? 20000 : 180000
           addLog('warning', `Изчакване ${(waitTime / 1000).toFixed(0)}s преди опит ${attempt}/${maxRetries}...`)
           await sleep(waitTime)
         }
@@ -173,19 +173,19 @@ export default function AnalysisScreen({
         const errorMsg = lastError.message
         
         if (errorMsg.includes('429') || errorMsg.includes('Too many requests') || errorMsg.includes('rate limit')) {
-          addLog('warning', `⏱️ Rate limit (429) - твърде много заявки! Опит ${attempt}/${maxRetries}`)
+          addLog('error', `⏱️ Rate limit достигнат - твърде много заявки!`)
           if (attempt < maxRetries) {
-            const backoffTime = useCustomAPI ? 15000 : 120000
-            addLog('info', `⏳ Изчакване ${(backoffTime / 1000).toFixed(0)}s преди повторен опит поради rate limit...`)
+            const backoffTime = useCustomAPI ? 30000 : 300000
+            addLog('warning', `⏳ Изчакване ${(backoffTime / 60000).toFixed(1)} минути преди повторен опит...`)
             await sleep(backoffTime)
             continue
           } else {
-            throw new Error(`Rate limit достигнат след всички опити. ${useCustomAPI ? 'Проверете вашия API лимит.' : 'Моля изчакайте 3-5 минути преди да опитате отново.'}`)
+            throw new Error(`Rate limit достигнат. ${useCustomAPI ? 'Проверете вашия API лимит и изчакайте.' : 'GitHub Spark API има ограничения. Моля изчакайте 5-10 минути или добавете собствен API ключ в Admin панела.'}`)
           }
         } else {
           addLog('error', `LLM грешка (опит ${attempt}): ${errorMsg}`)
           if (attempt < maxRetries) {
-            await sleep(5000)
+            await sleep(8000)
             continue
           }
         }
@@ -343,7 +343,7 @@ ${response}
       console.log('🚀 [АНАЛИЗ] Стартиране на анализ...')
       console.log('📊 [АНАЛИЗ] Данни от въпросник:', questionnaireData)
       
-      const requestDelay = aiConfig?.requestDelay || 30000
+      const requestDelay = aiConfig?.requestDelay || 60000
       const requestCount = aiConfig?.requestCount || 8
       const progressPerStep = 90 / requestCount
       let currentProgress = 5
@@ -503,9 +503,19 @@ ${response}
       const errorStack = error instanceof Error ? error.stack : 'Няма stack trace'
       
       let userFriendlyMessage = errorMessage
-      if (errorMessage.includes('429') || errorMessage.includes('Too many requests') || errorMessage.includes('rate limit')) {
-        userFriendlyMessage = '⏱️ Твърде много заявки към AI модела.\n\n💡 Моля изчакайте 1-2 минути и натиснете "Опитай отново".\n\nПричина: GitHub Spark има лимит за брой AI заявки в кратък период от време. Изчакването ще позволи на системата да се възстанови.'
-        addLog('error', 'Rate limit достигнат - твърде много заявки. Изчакайте 1-2 минути.')
+      if (errorMessage.includes('429') || errorMessage.includes('Too many requests') || errorMessage.includes('rate limit') || errorMessage.includes('Rate limit')) {
+        userFriendlyMessage = `⏱️ Rate Limit Достигнат
+
+GitHub Spark API има ограничения за брой заявки в минута.
+
+🔧 Решения:
+1. ⏳ Изчакайте 5-10 минути и опитайте отново
+2. 🔑 Добавете собствен API ключ в Admin панела:
+   • OpenAI (препоръчано за стабилност)
+   • Google Gemini (безплатен tier с по-висок лимит)
+
+💡 С собствен API ключ няма да имате rate limit проблеми.`
+        addLog('error', 'Rate limit достигнат - твърде много заявки.')
       } else {
         addLog('error', `Фатална грешка: ${errorMessage}`)
       }
@@ -1643,7 +1653,7 @@ BMI: ${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
               {error ? 'Възникна грешка' : 'AI Анализ в ход'}
             </h2>
             <p className={`mb-8 ${error ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {error ? 'Моля, изчакайте 1-2 минути и натиснете "Опитай отново"' : 'Анализираме вашите ириси с изкуствен интелект'}
+              {error ? 'Прочетете детайлите и следвайте инструкциите по-долу' : 'Анализираме вашите ириси с изкуствен интелект'}
             </p>
 
             {!error && (
@@ -1684,8 +1694,8 @@ BMI: ${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
                   <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/50">
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       ℹ️ {aiConfig?.useCustomKey 
-                        ? `Процесът с вашия ${aiConfig.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API ключ отнема 30-60 секунди.` 
-                        : 'Процесът с GitHub Spark модела (gpt-4o-mini) отнема 4-6 минути. Приложението изчаква 60 секунди между заявките за избягване на rate limit.'}
+                        ? `Процесът с вашия ${aiConfig.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API ключ отнема 1-2 минути.` 
+                        : 'Процесът с GitHub Spark модела отнема 8-10 минути. Приложението изчаква 60 секунди между заявките за избягване на rate limit.'}
                     </p>
                   </div>
                 </div>

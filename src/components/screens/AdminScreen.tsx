@@ -39,7 +39,7 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
     model: 'gpt-4o',
     apiKey: '',
     useCustomKey: false,
-    requestDelay: 30000,
+    requestDelay: 60000,
     requestCount: 8
   })
   
@@ -52,7 +52,7 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
   const [model, setModel] = useState(aiConfig?.model || 'gpt-4o')
   const [apiKey, setApiKey] = useState(aiConfig?.apiKey || '')
   const [useCustomKey, setUseCustomKey] = useState(aiConfig?.useCustomKey || false)
-  const [requestDelay, setRequestDelay] = useState(aiConfig?.requestDelay || 30000)
+  const [requestDelay, setRequestDelay] = useState(aiConfig?.requestDelay || 60000)
   const [requestCount, setRequestCount] = useState(aiConfig?.requestCount || 8)
   
   const [textbookName, setTextbookName] = useState('')
@@ -69,7 +69,7 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
       setModel(aiConfig.model)
       setApiKey(aiConfig.apiKey)
       setUseCustomKey(aiConfig.useCustomKey)
-      setRequestDelay(aiConfig.requestDelay || 30000)
+      setRequestDelay(aiConfig.requestDelay || 60000)
       setRequestCount(aiConfig.requestCount || 8)
     }
   }, [aiConfig])
