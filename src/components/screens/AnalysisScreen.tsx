@@ -142,13 +142,32 @@ export default function AnalysisScreen({
     const requestDelay = aiConfig?.requestDelay || 60000
     
     const hasCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig.apiKey.trim() !== ''
-    const useCustomAPI = hasCustomAPI && provider !== 'github-spark'
     
     console.log(`🔍 [LLM CONFIG DEBUG] Provider от конфигурация: "${provider}"`)
     console.log(`🔍 [LLM CONFIG DEBUG] Model от конфигурация: "${configuredModel}"`)
     console.log(`🔍 [LLM CONFIG DEBUG] useCustomKey flag: ${aiConfig?.useCustomKey}`)
     console.log(`🔍 [LLM CONFIG DEBUG] Has API key: ${!!(aiConfig?.apiKey && aiConfig.apiKey.trim() !== '')}`)
     console.log(`🔍 [LLM CONFIG DEBUG] hasCustomAPI: ${hasCustomAPI}`)
+    
+    if ((provider === 'gemini' || provider === 'openai') && !hasCustomAPI) {
+      const errorMsg = `❌ ГРЕШКА: Избрали сте ${provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} модел, но не сте активирали "Използвай собствен API ключ" или не сте въвели валиден API ключ.
+
+🔧 Решения:
+1. Отидете в Admin панела
+2. Активирайте "Използвай собствен API ключ" 
+3. Въведете вашия ${provider === 'gemini' ? 'Google AI' : 'OpenAI'} API ключ
+4. Запазете настройките
+
+ИЛИ
+
+Изберете "GitHub Spark" като provider за да използвате вградените модели (gpt-4o или gpt-4o-mini).`
+      
+      addLog('error', errorMsg)
+      console.error(`❌ [CONFIG ERROR] ${errorMsg}`)
+      throw new Error(errorMsg)
+    }
+    
+    const useCustomAPI = hasCustomAPI && provider !== 'github-spark'
     console.log(`🔍 [LLM CONFIG DEBUG] useCustomAPI (final): ${useCustomAPI}`)
     
     let actualModel: string
@@ -419,7 +438,26 @@ ${response}
       setAnalysisStarted(true)
       
       const hasCustomAPI = aiConfig.useCustomKey && aiConfig.apiKey && aiConfig.apiKey.trim() !== ''
-      const useCustomAPI = hasCustomAPI && aiConfig.provider !== 'github-spark'
+      const provider = aiConfig.provider
+      
+      if ((provider === 'gemini' || provider === 'openai') && !hasCustomAPI) {
+        const errorMsg = `❌ КОНФИГУРАЦИОННА ГРЕШКА: Избрали сте ${provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} модел, но не сте въвели API ключ.
+
+Моля, отидете в Admin панела и:
+1. Активирайте "Използвай собствен API ключ"
+2. Въведете вашия ${provider === 'gemini' ? 'Google AI' : 'OpenAI'} API ключ
+3. Запазете настройките
+
+ИЛИ изберете "GitHub Spark" като provider.`
+        
+        setError(errorMsg)
+        setStatus('Грешка в конфигурацията')
+        addLog('error', errorMsg)
+        console.error('❌ [CONFIG ERROR]', errorMsg)
+        return
+      }
+      
+      const useCustomAPI = hasCustomAPI && provider !== 'github-spark'
       
       let modelToUse: string
       let providerToUse: string
@@ -427,9 +465,9 @@ ${response}
       if (!useCustomAPI) {
         providerToUse = 'github-spark'
         modelToUse = getValidSparkModel(aiConfig.model)
-        console.log(`🔧 [CONFIG] Fallback към GitHub Spark - Конфигуриран модел: "${aiConfig.model}", валиден Spark модел: "${modelToUse}"`)
+        console.log(`🔧 [CONFIG] Използване на GitHub Spark - Конфигуриран модел: "${aiConfig.model}", валиден Spark модел: "${modelToUse}"`)
       } else {
-        providerToUse = aiConfig.provider
+        providerToUse = provider
         modelToUse = aiConfig.model
         console.log(`🔧 [CONFIG] Собствен API режим - Provider: ${providerToUse}, модел: "${modelToUse}"`)
       }
@@ -450,6 +488,20 @@ ${response}
       const requestCount = aiConfig?.requestCount || 8
       
       const hasCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig.apiKey.trim() !== ''
+      
+      if ((provider === 'gemini' || provider === 'openai') && !hasCustomAPI) {
+        const errorMsg = `❌ ГРЕШКА: Избрали сте ${provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} но нямате активиран собствен API ключ.
+
+🔧 Решение:
+Отидете в Admin панела и активирайте "Използвай собствен API ключ" + въведете валиден ${provider === 'gemini' ? 'Google AI' : 'OpenAI'} API ключ.`
+        
+        setError(errorMsg)
+        setStatus('Грешка в конфигурацията')
+        addLog('error', errorMsg)
+        console.error('❌ [ANALYSIS ERROR]', errorMsg)
+        return
+      }
+      
       const useCustomAPI = hasCustomAPI && provider !== 'github-spark'
       
       let actualModel: string
@@ -458,7 +510,7 @@ ${response}
       if (!useCustomAPI) {
         actualProvider = 'github-spark'
         actualModel = getValidSparkModel(configuredModel)
-        console.log(`🚀 [АНАЛИЗ] Fallback към GitHub Spark - Конфигуриран: "${configuredModel}", валиден: "${actualModel}"`)
+        console.log(`🚀 [АНАЛИЗ] Използване на GitHub Spark - Конфигуриран: "${configuredModel}", валиден: "${actualModel}"`)
       } else {
         actualModel = configuredModel
         actualProvider = provider

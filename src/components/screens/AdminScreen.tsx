@@ -98,6 +98,14 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
   }
 
   const handleSaveConfig = async () => {
+    if ((provider === 'gemini' || provider === 'openai') && !useCustomKey) {
+      toast.error(`❌ Грешка: ${provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} изисква собствен API ключ!`, {
+        description: 'Моля, активирайте "Използвай собствен API ключ" и въведете валиден API ключ.',
+        duration: 6000
+      })
+      return
+    }
+    
     if (useCustomKey && provider !== 'github-spark' && !apiKey.trim()) {
       toast.error('Моля, въведете API ключ')
       return
@@ -122,7 +130,10 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
           duration: 5000
         })
       } else {
-        toast.success(`✓ AI конфигурация запазена: ${provider} / ${model}`)
+        toast.success(`✓ AI конфигурация запазена: ${provider} / ${model}`, {
+          description: 'Вашият собствен API ключ ще бъде използван за анализите.',
+          duration: 5000
+        })
       }
     } catch (error) {
       console.error('Error saving config:', error)
@@ -318,17 +329,37 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
               )}
               
               {aiConfig && (
-                <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
-                  <p className="text-sm font-medium text-primary">
-                    ✓ Активна конфигурация: {aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey ? (
+                <div className={`mt-3 p-3 rounded-lg border ${
+                  (aiConfig.provider === 'gemini' || aiConfig.provider === 'openai') && !aiConfig.useCustomKey
+                    ? 'bg-destructive/10 border-destructive/30'
+                    : 'bg-primary/10 border-primary/20'
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    (aiConfig.provider === 'gemini' || aiConfig.provider === 'openai') && !aiConfig.useCustomKey
+                      ? 'text-destructive'
+                      : 'text-primary'
+                  }`}>
+                    {(aiConfig.provider === 'gemini' || aiConfig.provider === 'openai') && !aiConfig.useCustomKey ? (
                       <>
-                        <span className="font-mono">GitHub Spark / {aiConfig.model}</span>
+                        ❌ ГРЕШНА КОНФИГУРАЦИЯ: {aiConfig.provider === 'gemini' ? 'Gemini' : 'OpenAI'} / {aiConfig.model}
+                        <span className="ml-2 text-xs">
+                          (няма API ключ - анализът НЯМА ДА РАБОТИ)
+                        </span>
+                      </>
+                    ) : aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey ? (
+                      <>
+                        ✓ Активна конфигурация: <span className="font-mono">GitHub Spark / {aiConfig.model}</span>
                         <span className="ml-2 text-xs text-muted-foreground">
                           (поддържа gpt-4o и gpt-4o-mini)
                         </span>
                       </>
                     ) : (
-                      <span className="font-mono">{aiConfig.provider} / {aiConfig.model}</span>
+                      <>
+                        ✓ Активна конфигурация: <span className="font-mono">{aiConfig.provider} / {aiConfig.model}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          (собствен API ключ)
+                        </span>
+                      </>
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -369,6 +400,25 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
                         ℹ️ GitHub Spark API поддържа <strong>gpt-4o</strong> и <strong>gpt-4o-mini</strong>. 
                         Изборът ви по-долу ще бъде използван. За достъп до други модели (GPT-4 Turbo, Gemini), 
                         използвайте собствен API ключ.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {(provider === 'openai' || provider === 'gemini') && (
+                    <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/30">
+                      <p className="text-xs font-semibold text-accent-foreground mb-2">
+                        ⚠️ ВАЖНО: {provider === 'gemini' ? 'Google Gemini' : 'OpenAI'} изисква собствен API ключ
+                      </p>
+                      <p className="text-xs text-accent-foreground/80">
+                        За да използвате {provider === 'gemini' ? 'Gemini модели' : 'OpenAI модели'}, трябва да:
+                      </p>
+                      <ol className="text-xs text-accent-foreground/80 mt-2 space-y-1 list-decimal list-inside">
+                        <li>Активирайте "Използвай собствен API ключ" по-долу</li>
+                        <li>Въведете валиден {provider === 'gemini' ? 'Google AI' : 'OpenAI'} API ключ</li>
+                        <li>Запазете настройките</li>
+                      </ol>
+                      <p className="text-xs text-accent-foreground/80 mt-2">
+                        Без API ключ, анализът <strong>НЯМА ДА РАБОТИ</strong>.
                       </p>
                     </div>
                   )}
