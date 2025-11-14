@@ -152,31 +152,27 @@ export default function AnalysisScreen({
     console.log(`🔍 [LLM CONFIG DEBUG] useCustomAPI (final): ${useCustomAPI}`)
     
     let actualModel: string
-    let actualProvider: string = provider
+    let actualProvider: string
     
-    if (!useCustomAPI) {
-      actualProvider = 'github-spark'
-      actualModel = getValidSparkModel(configuredModel)
-      console.log(`🎯 [LLM CONFIG] Fallback към GitHub Spark`)
-      console.log(`🎯 [LLM CONFIG] Provider (актуален): ${actualProvider}`)
-      console.log(`🎯 [LLM CONFIG] Избран модел от настройки: "${configuredModel}"`)
-      console.log(`🎯 [LLM CONFIG] Валидиран модел за Spark: "${actualModel}"`)
-      addLog('info', `✓ AI Конфигурация заредена: ${actualProvider} / ${actualModel}`)
-    } else {
+    if (useCustomAPI) {
       actualModel = configuredModel
       actualProvider = provider
-      console.log(`🎯 [LLM CONFIG] Използване на собствен API`)
+      console.log(`🎯 [LLM CONFIG] ✅ Използване на СОБСТВЕН API`)
       console.log(`🎯 [LLM CONFIG] Provider: ${actualProvider}`)
       console.log(`🎯 [LLM CONFIG] Model: ${actualModel}`)
       addLog('info', `✓ AI Конфигурация заредена: ${actualProvider} / ${actualModel}`)
-    }
-    
-    if (useCustomAPI) {
       addLog('info', `🔧 Режим: Собствен API (${actualProvider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
-      console.log(`🔧 [LLM] Използване на собствен ${actualProvider} API с модел: ${actualModel}`)
     } else {
-      addLog('info', `🔧 Режим: GitHub Spark вграден модел (${actualModel}) | Забавяне: ${requestDelay}ms`)
-      console.log(`🔧 [LLM] Използване на GitHub Spark API с модел: ${actualModel}`)
+      actualProvider = 'github-spark'
+      actualModel = getValidSparkModel(configuredModel)
+      console.log(`⚠️ [LLM CONFIG] Fallback към GitHub Spark (НЕ използва избрания модел!)`)
+      console.log(`🎯 [LLM CONFIG] Provider (актуален): ${actualProvider}`)
+      console.log(`🎯 [LLM CONFIG] Настроен модел: "${configuredModel}"`)
+      console.log(`🎯 [LLM CONFIG] ⚠️ ВАЖНО: GitHub Spark API игнорира избрания модел и използва винаги gpt-4o!`)
+      console.log(`🎯 [LLM CONFIG] За да използвате избрания модел, добавете собствен API ключ в настройките.`)
+      addLog('warning', `⚠️ GitHub Spark винаги използва gpt-4o независимо от настройките!`)
+      addLog('info', `ℹ️ За да използвате избран модел, добавете собствен API ключ в Admin панела`)
+      addLog('info', `🔧 Режим: GitHub Spark вграден модел (винаги gpt-4o) | Забавяне: ${requestDelay}ms`)
     }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -192,7 +188,8 @@ export default function AnalysisScreen({
         
         let response: string
         if (useCustomAPI) {
-          addLog('info', `→ Извикване на външен API: ${actualProvider}/${actualModel}`)
+          addLog('info', `→ ✅ Извикване на СОБСТВЕН ${actualProvider} API с модел ${actualModel}`)
+          console.log(`🔑 [API CALL] Използване на собствен ${actualProvider} API ключ`)
           response = await callExternalAPI(
             prompt,
             actualProvider as 'openai' | 'gemini',
@@ -201,9 +198,9 @@ export default function AnalysisScreen({
             jsonMode
           )
         } else {
-          addLog('info', `→ Извикване на GitHub Spark API с модел: ${actualModel}`)
-          console.log(`🌟 [SPARK] Извикване на window.spark.llm с модел: ${actualModel}`)
-          response = await window.spark.llm(prompt, actualModel as 'gpt-4o' | 'gpt-4o-mini', jsonMode)
+          addLog('warning', `→ ⚠️ Използване на GitHub Spark API (ИГНОРИРА избрания модел!)`)
+          console.log(`🌟 [SPARK] Извикване на window.spark.llm (винаги gpt-4o)`)
+          response = await window.spark.llm(prompt, 'gpt-4o', jsonMode)
         }
         
         if (response && response.length > 0) {

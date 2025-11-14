@@ -73,11 +73,15 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
   useEffect(() => {
     if (aiConfig) {
       setProvider(aiConfig.provider)
-      setModel(aiConfig.model)
+      setModel(aiConfig.provider === 'github-spark' ? 'gpt-4o' : aiConfig.model)
       setApiKey(aiConfig.apiKey)
       setUseCustomKey(aiConfig.useCustomKey)
       setRequestDelay(aiConfig.requestDelay || 60000)
       setRequestCount(aiConfig.requestCount || 8)
+      
+      if (aiConfig.provider === 'github-spark') {
+        console.log('ℹ️ [ADMIN] GitHub Spark Provider зареден - фиксиран модел gpt-4o')
+      }
     }
   }, [aiConfig])
 
@@ -102,7 +106,7 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
     try {
       const config: AIModelConfig = {
         provider,
-        model,
+        model: provider === 'github-spark' ? 'gpt-4o' : model,
         apiKey: useCustomKey && provider !== 'github-spark' ? apiKey : '',
         useCustomKey: provider !== 'github-spark' ? useCustomKey : false,
         requestDelay,
@@ -110,8 +114,20 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
       }
       
       console.log('💾 [ADMIN] Запазване на конфигурация:', config)
+      
+      if (provider === 'github-spark') {
+        console.warn('⚠️ [ADMIN] GitHub Spark API винаги използва gpt-4o независимо от избраните настройки')
+      }
+      
       await setAiConfig(config)
-      toast.success(`✓ AI конфигурация запазена: ${provider} / ${model}`)
+      
+      if (provider === 'github-spark' || !useCustomKey) {
+        toast.success(`✓ Конфигурацията е запазена. ВАЖНО: GitHub Spark винаги използва gpt-4o!`, {
+          duration: 5000
+        })
+      } else {
+        toast.success(`✓ AI конфигурация запазена: ${provider} / ${model}`)
+      }
     } catch (error) {
       console.error('Error saving config:', error)
       toast.error('Грешка при запазване на конфигурацията')
@@ -290,17 +306,30 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
               <CardDescription>
                 Изберете AI модел и конфигурирайте API достъп за анализ на ирисите
               </CardDescription>
+              
+              {aiConfig && aiConfig.provider === 'github-spark' && !aiConfig.useCustomKey && (
+                <div className="mt-3 p-3 bg-warning/10 rounded-lg border-2 border-warning/30">
+                  <p className="text-sm font-bold text-warning flex items-center gap-2">
+                    <Warning className="w-5 h-5" />
+                    ВАЖНО: GitHub Spark API не позволява избор на модел!
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    GitHub Spark API винаги използва <strong>gpt-4o</strong> независимо от избраните настройки.
+                    За да използвате избран модел (включително други модели като Gemini), трябва да добавите 
+                    <strong> собствен API ключ</strong> от OpenAI или Google.
+                  </p>
+                </div>
+              )}
+              
               {aiConfig && (
                 <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
                   <p className="text-sm font-medium text-primary">
                     ✓ Активна конфигурация: {aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey ? (
                       <>
-                        <span className="font-mono">GitHub Spark / {getValidSparkModel(aiConfig.model)}</span>
-                        {aiConfig.model !== 'gpt-4o' && aiConfig.model !== 'gpt-4o-mini' && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            (Конфигуриран модел "{aiConfig.model}" не е валиден за GitHub Spark, използва се "{getValidSparkModel(aiConfig.model)}")
-                          </span>
-                        )}
+                        <span className="font-mono">GitHub Spark / gpt-4o</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          (фиксиран модел - за други модели използвайте собствен API ключ)
+                        </span>
                       </>
                     ) : (
                       <span className="font-mono">{aiConfig.provider} / {aiConfig.model}</span>
@@ -321,38 +350,49 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="github-spark" id="github-spark" />
                       <Label htmlFor="github-spark" className="font-normal cursor-pointer">
-                        GitHub Spark (вграден - препоръчително)
+                        GitHub Spark (вграден - винаги gpt-4o)
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="openai" id="openai" />
                       <Label htmlFor="openai" className="font-normal cursor-pointer">
-                        OpenAI (GPT-4o, GPT-4 Turbo)
+                        OpenAI (изисква API ключ - позволява избор на модел)
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="gemini" id="gemini" />
                       <Label htmlFor="gemini" className="font-normal cursor-pointer">
-                        Google Gemini (Gemini 2.0, Gemini 1.5)
+                        Google Gemini (изисква API ключ - позволява избор на модел)
                       </Label>
                     </div>
                   </RadioGroup>
+                  
+                  {provider === 'github-spark' && (
+                    <div className="mt-2 p-2 bg-muted/50 rounded-lg border border-border">
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ GitHub Spark API използва фиксиран модел <strong>gpt-4o</strong> и не позволява избор на друг модел.
+                        Изборът на модел по-долу няма ефект при GitHub Spark API.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="model">Модел</Label>
-                  <Select value={model} onValueChange={setModel}>
+                  <Label htmlFor="model">Модел {provider === 'github-spark' && <span className="text-xs text-muted-foreground">(няма ефект при GitHub Spark)</span>}</Label>
+                  <Select 
+                    value={model} 
+                    onValueChange={setModel}
+                    disabled={provider === 'github-spark'}
+                  >
                     <SelectTrigger id="model">
                       <SelectValue placeholder="Изберете модел" />
                     </SelectTrigger>
                     <SelectContent>
                       {provider === 'github-spark' && (
                         <>
-                          {githubSparkModels.map((m) => (
-                            <SelectItem key={m} value={m}>
-                              {m}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="gpt-4o">
+                            gpt-4o (фиксиран)
+                          </SelectItem>
                         </>
                       )}
                       {provider === 'openai' && (
