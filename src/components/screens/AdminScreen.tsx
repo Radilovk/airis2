@@ -59,6 +59,13 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
   const [textbookContent, setTextbookContent] = useState('')
   const [showOverlayPreview, setShowOverlayPreview] = useState(false)
 
+  const getValidSparkModel = (model: string): string => {
+    if (model === 'gpt-4o' || model === 'gpt-4o-mini') {
+      return model
+    }
+    return 'gpt-4o'
+  }
+
   useEffect(() => {
     checkOwnership()
   }, [])
@@ -286,7 +293,14 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
                 <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
                   <p className="text-sm font-medium text-primary">
                     ✓ Активна конфигурация: {aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey ? (
-                      <span className="font-mono">GitHub Spark / {aiConfig.model}</span>
+                      <>
+                        <span className="font-mono">GitHub Spark / {getValidSparkModel(aiConfig.model)}</span>
+                        {aiConfig.model !== 'gpt-4o' && aiConfig.model !== 'gpt-4o-mini' && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (Конфигуриран модел "{aiConfig.model}" не е валиден за GitHub Spark, използва се "{getValidSparkModel(aiConfig.model)}")
+                          </span>
+                        )}
+                      </>
                     ) : (
                       <span className="font-mono">{aiConfig.provider} / {aiConfig.model}</span>
                     )}

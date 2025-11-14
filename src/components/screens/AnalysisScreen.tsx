@@ -44,6 +44,14 @@ export default function AnalysisScreen({
     requestCount: 8
   })
 
+  const getValidSparkModel = (model: string): 'gpt-4o' | 'gpt-4o-mini' => {
+    if (model === 'gpt-4o' || model === 'gpt-4o-mini') {
+      return model
+    }
+    console.warn(`⚠️ [МОДЕЛ] Невалиден модел за GitHub Spark: "${model}", използва се по подразбиране "gpt-4o"`)
+    return 'gpt-4o'
+  }
+
   const addLog = (level: LogEntry['level'], message: string) => {
     const timestamp = new Date().toLocaleTimeString('bg-BG', { hour12: false })
     setLogs(prev => [...prev, { timestamp, level, message }])
@@ -134,9 +142,16 @@ export default function AnalysisScreen({
     const configuredModel = aiConfig?.model || 'gpt-4o'
     const requestDelay = aiConfig?.requestDelay || 60000
     
-    const actualModel = (provider === 'github-spark' || !useCustomAPI) 
-      ? (configuredModel === 'gpt-4o' || configuredModel === 'gpt-4o-mini' ? configuredModel : 'gpt-4o')
-      : configuredModel
+    let actualModel: string
+    if (provider === 'github-spark' || !useCustomAPI) {
+      actualModel = getValidSparkModel(configuredModel)
+      console.log(`🎯 [LLM CONFIG] Provider: ${provider}, useCustomAPI: ${useCustomAPI}`)
+      console.log(`🎯 [LLM CONFIG] configuredModel: "${configuredModel}", actualModel за Spark: "${actualModel}"`)
+    } else {
+      actualModel = configuredModel
+      console.log(`🎯 [LLM CONFIG] Provider: ${provider}, useCustomAPI: ${useCustomAPI}`)
+      console.log(`🎯 [LLM CONFIG] configuredModel: "${configuredModel}", actualModel за External API: "${actualModel}"`)
+    }
     
     if (useCustomAPI) {
       addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
@@ -168,10 +183,12 @@ export default function AnalysisScreen({
             jsonMode
           )
         } else {
-          addLog('info', `→ Извикване на GitHub Spark API с модел: ${actualModel}`)
-          console.log(`🌟 [SPARK] Извикване на window.spark.llm с модел: ${actualModel}`)
-          console.log(`🎯 [SPARK] Точен модел параметър: "${actualModel}"`)
-          response = await window.spark.llm(prompt, actualModel as 'gpt-4o' | 'gpt-4o-mini', jsonMode)
+          const sparkModel = getValidSparkModel(actualModel)
+          addLog('info', `→ Извикване на GitHub Spark API с модел: ${sparkModel}`)
+          console.log(`🌟 [SPARK] Извикване на window.spark.llm с модел: ${sparkModel}`)
+          console.log(`🎯 [SPARK] Точен модел параметър: "${sparkModel}"`)
+          console.log(`🔍 [SPARK] Оригинален actualModel преди валидация: "${actualModel}"`)
+          response = await window.spark.llm(prompt, sparkModel, jsonMode)
         }
         
         if (response && response.length > 0) {
@@ -388,9 +405,18 @@ ${response}
   useEffect(() => {
     if (aiConfig && !analysisStarted) {
       setAnalysisStarted(true)
-      const modelToUse = (aiConfig.provider === 'github-spark' || !aiConfig.useCustomKey) 
-        ? (aiConfig.model === 'gpt-4o' || aiConfig.model === 'gpt-4o-mini' ? aiConfig.model : 'gpt-4o')
-        : aiConfig.model
+      
+      const useCustomAPI = aiConfig.useCustomKey && aiConfig.apiKey && aiConfig.provider !== 'github-spark'
+      let modelToUse: string
+      
+      if (aiConfig.provider === 'github-spark' || !useCustomAPI) {
+        modelToUse = getValidSparkModel(aiConfig.model)
+        console.log(`🔧 [CONFIG] GitHub Spark режим - Конфигуриран модел: "${aiConfig.model}", валиден Spark модел: "${modelToUse}"`)
+      } else {
+        modelToUse = aiConfig.model
+        console.log(`🔧 [CONFIG] Собствен API режим - Provider: ${aiConfig.provider}, модел: "${modelToUse}"`)
+      }
+      
       addLog('info', `✓ AI Конфигурация заредена: ${aiConfig.provider} / ${modelToUse}`)
       console.log('🔧 [CONFIG] AI конфигурация заредена:', aiConfig)
       console.log('🎯 [CONFIG] Модел който ще се използва:', modelToUse)
@@ -400,12 +426,21 @@ ${response}
 
   const performAnalysis = async () => {
     try {
-      const modelToUse = (aiConfig?.provider === 'github-spark' || !aiConfig?.useCustomKey) 
-        ? (aiConfig?.model === 'gpt-4o' || aiConfig?.model === 'gpt-4o-mini' ? aiConfig?.model : 'gpt-4o')
-        : (aiConfig?.model || 'gpt-4o')
+      const useCustomAPI = aiConfig?.useCustomKey && aiConfig?.apiKey && aiConfig?.provider !== 'github-spark'
+      const provider = aiConfig?.provider || 'github-spark'
+      let modelToUse: string
+      
+      if (provider === 'github-spark' || !useCustomAPI) {
+        const configuredModel = aiConfig?.model || 'gpt-4o'
+        modelToUse = getValidSparkModel(configuredModel)
+        console.log(`🚀 [АНАЛИЗ] GitHub Spark режим - Конфигуриран: "${configuredModel}", валиден: "${modelToUse}"`)
+      } else {
+        modelToUse = aiConfig?.model || 'gpt-4o'
+        console.log(`🚀 [АНАЛИЗ] Собствен API режим - Provider: ${provider}, модел: "${modelToUse}"`)
+      }
       
       addLog('info', 'Стартиране на анализ...')
-      addLog('info', `⚙️ AI Настройки: Provider=${aiConfig?.provider || 'github-spark'}, Model=${modelToUse}, CustomAPI=${aiConfig?.useCustomKey || false}`)
+      addLog('info', `⚙️ AI Настройки: Provider=${provider}, Model=${modelToUse}, CustomAPI=${useCustomAPI}`)
       addLog('info', `⚙️ Параметри: Забавяне=${aiConfig?.requestDelay || 60000}ms, Заявки=${aiConfig?.requestCount || 8}`)
       addLog('info', `Данни от въпросник: Възраст ${questionnaireData.age}, Пол ${questionnaireData.gender}`)
       addLog('info', `Здравни цели: ${questionnaireData.goals.join(', ')}`)
