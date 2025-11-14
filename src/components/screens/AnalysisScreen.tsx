@@ -29,11 +29,13 @@ export default function AnalysisScreen({
   onComplete
 }: AnalysisScreenProps) {
   const [progress, setProgress] = useState(0)
-  const [status, setStatus] = useState('Подготовка за анализ...')
+  const [status, setStatus] = useState('Зареждане на AI конфигурация...')
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [showDebug, setShowDebug] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [analysisStarted, setAnalysisStarted] = useState(false)
+  const [configLoaded, setConfigLoaded] = useState(false)
+  const [loadedConfig, setLoadedConfig] = useState<AIModelConfig | null>(null)
   
   const [aiConfig] = useKV<AIModelConfig>('ai-model-config', {
     provider: 'github-spark',
@@ -137,18 +139,28 @@ export default function AnalysisScreen({
   ): Promise<string> => {
     let lastError: Error | null = null
     
-    const provider = aiConfig?.provider || 'github-spark'
-    const configuredModel = aiConfig?.model || 'gpt-4o'
-    const requestDelay = aiConfig?.requestDelay || 60000
+    const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
+    const finalConfig = storedConfig || aiConfig || {
+      provider: 'github-spark',
+      model: 'gpt-4o',
+      apiKey: '',
+      useCustomKey: false,
+      requestDelay: 60000,
+      requestCount: 8
+    }
     
-    const hasAPIKey = aiConfig?.apiKey && aiConfig.apiKey.trim() !== ''
+    const provider = finalConfig.provider
+    const configuredModel = finalConfig.model
+    const requestDelay = finalConfig.requestDelay || 60000
+    
+    const hasAPIKey = finalConfig.apiKey && finalConfig.apiKey.trim() !== ''
     const isExternalProvider = provider === 'gemini' || provider === 'openai'
     const hasCustomAPI = hasAPIKey && isExternalProvider
-    const useCustomAPI = hasCustomAPI || (aiConfig?.useCustomKey && hasAPIKey && isExternalProvider)
+    const useCustomAPI = hasCustomAPI || (finalConfig.useCustomKey && hasAPIKey && isExternalProvider)
     
     console.log(`🔍 [LLM CONFIG DEBUG] Provider от конфигурация: "${provider}"`)
     console.log(`🔍 [LLM CONFIG DEBUG] Model от конфигурация: "${configuredModel}"`)
-    console.log(`🔍 [LLM CONFIG DEBUG] useCustomKey flag: ${aiConfig?.useCustomKey}`)
+    console.log(`🔍 [LLM CONFIG DEBUG] useCustomKey flag: ${finalConfig.useCustomKey}`)
     console.log(`🔍 [LLM CONFIG DEBUG] Has API key: ${hasAPIKey}`)
     console.log(`🔍 [LLM CONFIG DEBUG] isExternalProvider: ${isExternalProvider}`)
     console.log(`🔍 [LLM CONFIG DEBUG] hasCustomAPI: ${hasCustomAPI}`)
@@ -197,7 +209,7 @@ export default function AnalysisScreen({
             prompt,
             actualProvider as 'openai' | 'gemini',
             actualModel,
-            aiConfig!.apiKey,
+            finalConfig.apiKey,
             jsonMode
           )
         } else {
@@ -418,18 +430,31 @@ ${response}
   }
 
   useEffect(() => {
-    if (aiConfig && !analysisStarted) {
-      setAnalysisStarted(true)
+    const loadConfigAndStartAnalysis = async () => {
+      if (configLoaded || analysisStarted) return
       
-      const hasAPIKey = aiConfig.apiKey && aiConfig.apiKey.trim() !== ''
-      const isExternalProvider = aiConfig.provider === 'gemini' || aiConfig.provider === 'openai'
+      await sleep(500)
+      
+      const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
+      const finalConfig = storedConfig || aiConfig
+      
+      if (!finalConfig) {
+        console.warn('⚠️ [CONFIG] Няма конфигурация - използване на default')
+        setConfigLoaded(true)
+        setAnalysisStarted(true)
+        performAnalysis()
+        return
+      }
+      
+      const hasAPIKey = finalConfig.apiKey && finalConfig.apiKey.trim() !== ''
+      const isExternalProvider = finalConfig.provider === 'gemini' || finalConfig.provider === 'openai'
       const hasCustomAPI = hasAPIKey && isExternalProvider
-      const useCustomAPI = hasCustomAPI || (aiConfig.useCustomKey && hasAPIKey && isExternalProvider)
+      const useCustomAPI = hasCustomAPI || (finalConfig.useCustomKey && hasAPIKey && isExternalProvider)
       
       let modelToUse: string
       let providerToUse: string
       
-      console.log('🔍 [CONFIG DEBUG] aiConfig:', aiConfig)
+      console.log('🔍 [CONFIG DEBUG] finalConfig от KV:', finalConfig)
       console.log('🔍 [CONFIG DEBUG] hasAPIKey:', hasAPIKey)
       console.log('🔍 [CONFIG DEBUG] isExternalProvider:', isExternalProvider)
       console.log('🔍 [CONFIG DEBUG] hasCustomAPI:', hasCustomAPI)
@@ -437,33 +462,49 @@ ${response}
       
       if (!useCustomAPI) {
         providerToUse = 'github-spark'
-        modelToUse = getValidSparkModel(aiConfig.model)
-        console.log(`🔧 [CONFIG] GitHub Spark режим - Конфигуриран модел: "${aiConfig.model}", валиден Spark модел: "${modelToUse}"`)
+        modelToUse = getValidSparkModel(finalConfig.model)
+        console.log(`🔧 [CONFIG] GitHub Spark режим - Конфигуриран модел: "${finalConfig.model}", валиден Spark модел: "${modelToUse}"`)
       } else {
-        providerToUse = aiConfig.provider
-        modelToUse = aiConfig.model
+        providerToUse = finalConfig.provider
+        modelToUse = finalConfig.model
         console.log(`🔧 [CONFIG] Собствен API режим - Provider: ${providerToUse}, модел: "${modelToUse}"`)
       }
       
       addLog('info', `✓ AI Конфигурация заредена: ${providerToUse} / ${modelToUse}`)
-      console.log('🔧 [CONFIG] AI конфигурация заредена:', aiConfig)
+      console.log('🔧 [CONFIG] AI конфигурация заредена:', finalConfig)
       console.log('🎯 [CONFIG] Provider който ще се използва:', providerToUse)
       console.log('🎯 [CONFIG] Модел който ще се използва:', modelToUse)
+      
+      setLoadedConfig(finalConfig)
+      setConfigLoaded(true)
+      setAnalysisStarted(true)
       performAnalysis()
     }
-  }, [aiConfig, analysisStarted])
+    
+    loadConfigAndStartAnalysis()
+  }, [])
 
   const performAnalysis = async () => {
     try {
-      const provider = aiConfig?.provider || 'github-spark'
-      const configuredModel = aiConfig?.model || 'gpt-4o'
-      const requestDelay = aiConfig?.requestDelay || 60000
-      const requestCount = aiConfig?.requestCount || 8
+      const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
+      const finalConfig = storedConfig || aiConfig || {
+        provider: 'github-spark',
+        model: 'gpt-4o',
+        apiKey: '',
+        useCustomKey: false,
+        requestDelay: 60000,
+        requestCount: 8
+      }
       
-      const hasAPIKey = aiConfig?.apiKey && aiConfig.apiKey.trim() !== ''
+      const provider = finalConfig.provider
+      const configuredModel = finalConfig.model
+      const requestDelay = finalConfig.requestDelay || 60000
+      const requestCount = finalConfig.requestCount || 8
+      
+      const hasAPIKey = finalConfig.apiKey && finalConfig.apiKey.trim() !== ''
       const isExternalProvider = provider === 'gemini' || provider === 'openai'
       const hasCustomAPI = hasAPIKey && isExternalProvider
-      const useCustomAPI = hasCustomAPI || (aiConfig?.useCustomKey && hasAPIKey && isExternalProvider)
+      const useCustomAPI = hasCustomAPI || (finalConfig.useCustomKey && hasAPIKey && isExternalProvider)
       
       let actualModel: string
       let actualProvider: string = provider
@@ -484,7 +525,7 @@ ${response}
       addLog('info', `Данни от въпросник: Възраст ${questionnaireData.age}, Пол ${questionnaireData.gender}`)
       addLog('info', `Здравни цели: ${questionnaireData.goals.join(', ')}`)
       console.log('🚀 [АНАЛИЗ] Стартиране на анализ...')
-      console.log('⚙️ [АНАЛИЗ] AI Конфигурация:', aiConfig)
+      console.log('⚙️ [АНАЛИЗ] AI Конфигурация:', finalConfig)
       console.log('🎯 [АНАЛИЗ] Provider който ще се използва:', actualProvider)
       console.log('🎯 [АНАЛИЗ] Модел който ще се използва:', actualModel)
       console.log('📊 [АНАЛИЗ] Данни от въпросник:', questionnaireData)
@@ -1837,8 +1878,8 @@ BMI: ${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
                   </div>
                   <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/50">
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      ℹ️ {aiConfig?.useCustomKey 
-                        ? `Процесът с вашия ${aiConfig.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API ключ отнема 1-2 минути.` 
+                      ℹ️ {loadedConfig?.useCustomKey && loadedConfig.provider !== 'github-spark'
+                        ? `Процесът с вашия ${loadedConfig.provider === 'gemini' ? 'Gemini' : 'OpenAI'} API ключ отнема 1-2 минути.` 
                         : 'Процесът с GitHub Spark модела отнема 8-10 минути. Приложението изчаква 60 секунди между заявките за избягване на rate limit.'}
                     </p>
                   </div>
