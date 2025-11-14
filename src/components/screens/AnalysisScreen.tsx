@@ -33,6 +33,7 @@ export default function AnalysisScreen({
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [showDebug, setShowDebug] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [analysisStarted, setAnalysisStarted] = useState(false)
   
   const [aiConfig] = useKV<AIModelConfig>('ai-model-config', {
     provider: 'github-spark',
@@ -135,8 +136,10 @@ export default function AnalysisScreen({
     
     if (useCustomAPI) {
       addLog('info', `🔧 Режим: Собствен API (${provider} - ${actualModel}) | Забавяне: ${requestDelay}ms`)
+      console.log(`🔧 [LLM] Използване на собствен ${provider} API с модел: ${actualModel}`)
     } else {
       addLog('info', `🔧 Режим: GitHub Spark вграден модел (${actualModel}) | Забавяне: ${requestDelay}ms`)
+      console.log(`🔧 [LLM] Използване на GitHub Spark API с модел: ${actualModel}`)
     }
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -147,10 +150,12 @@ export default function AnalysisScreen({
           await sleep(waitTime)
         }
         
-        addLog('info', `LLM заявка (опит ${attempt}/${maxRetries})...`)
+        addLog('info', `LLM заявка (опит ${attempt}/${maxRetries}) към ${provider}/${actualModel}...`)
+        console.log(`🤖 [LLM] Заявка ${attempt}/${maxRetries} към ${provider} с модел ${actualModel}`)
         
         let response: string
         if (useCustomAPI && provider !== 'github-spark') {
+          addLog('info', `→ Извикване на външен API: ${provider}/${actualModel}`)
           response = await callExternalAPI(
             prompt,
             provider as 'openai' | 'gemini',
@@ -159,11 +164,14 @@ export default function AnalysisScreen({
             jsonMode
           )
         } else {
+          addLog('info', `→ Извикване на GitHub Spark API с модел: ${actualModel}`)
+          console.log(`🌟 [SPARK] Извикване на window.spark.llm с модел: ${actualModel}`)
           response = await window.spark.llm(prompt, actualModel as any, jsonMode)
         }
         
         if (response && response.length > 0) {
           addLog('success', `LLM отговори успешно (${response.length} символа)`)
+          console.log(`✅ [LLM] Успешен отговор от ${provider}/${actualModel}`)
           return response
         } else {
           throw new Error('Празен отговор от LLM')
@@ -373,15 +381,23 @@ ${response}
   }
 
   useEffect(() => {
-    performAnalysis()
-  }, [])
+    if (aiConfig && !analysisStarted) {
+      setAnalysisStarted(true)
+      addLog('info', `✓ AI Конфигурация заредена: ${aiConfig.provider} / ${aiConfig.model}`)
+      console.log('🔧 [CONFIG] AI конфигурация заредена:', aiConfig)
+      performAnalysis()
+    }
+  }, [aiConfig, analysisStarted])
 
   const performAnalysis = async () => {
     try {
       addLog('info', 'Стартиране на анализ...')
+      addLog('info', `⚙️ AI Настройки: Provider=${aiConfig?.provider || 'github-spark'}, Model=${aiConfig?.model || 'gpt-4o'}, CustomAPI=${aiConfig?.useCustomKey || false}`)
+      addLog('info', `⚙️ Параметри: Забавяне=${aiConfig?.requestDelay || 60000}ms, Заявки=${aiConfig?.requestCount || 8}`)
       addLog('info', `Данни от въпросник: Възраст ${questionnaireData.age}, Пол ${questionnaireData.gender}`)
       addLog('info', `Здравни цели: ${questionnaireData.goals.join(', ')}`)
       console.log('🚀 [АНАЛИЗ] Стартиране на анализ...')
+      console.log('⚙️ [АНАЛИЗ] AI Конфигурация:', aiConfig)
       console.log('📊 [АНАЛИЗ] Данни от въпросник:', questionnaireData)
       
       const requestDelay = aiConfig?.requestDelay || 60000
