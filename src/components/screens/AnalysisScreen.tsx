@@ -755,117 +755,73 @@ ${AIRIS_KNOWLEDGE.artifacts.types.map(a => `${a.name}: ${a.interpretation}`).joi
       addLog('success', `База знания заредена (${knowledgeContext.length} символа)`)
       
       addLog('info', 'Подготовка на prompt за LLM...')
-      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Ти си професионален иридолог с 20+ години опит. Анализирай ${sideName} ирис детайлно и прецизно като ВИНАГИ КОРЕЛИРАШ находките с данните от въпросника.
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`PROF_IRIDOLOGIST | IMG_ID:${imageHash} | SIDE:${sideName}
 
-КРИТИЧНО ВАЖНО - ПРАВИЛА ЗА ВАЛИДНОСТ НА ИЗВОДИТЕ:
-1. ВИСОК ПРИОРИТЕТ И ЗНАЧИМОСТ: Находки в ириса които СЕ ПОТВЪРЖДАВАТ от данните във въпросника (оплаквания, здравен статус, навици)
-2. СРЕДЕН ПРИОРИТЕТ: Находки които се виждат в ириса НО не се споменават във въпросника (нито потвърждават, нито противоречат)
-3. НУЛЕВ ПРИОРИТЕТ: ИГНОРИРАЙ находки в ириса които ПРОТИВОРЕЧАТ на въпросника и цялостната информация за клиента
+CORE_RULES:
+1. HIGH_PRIO: iris_findings CONFIRM questionnaire_data
+2. MED_PRIO: iris_findings NO_CONFLICT questionnaire_data
+3. IGNORE: iris_findings CONTRADICT questionnaire_data
 
-ИЗОБРАЖЕНИЕ ID ЗА КОНСИСТЕНТНОСТ: ${imageHash}
-При същия ID + същи въпросник = ИДЕНТИЧЕН анализ
+CLIENT_DATA:
+Age:${questionnaire.age} Sex:${genderName} BMI:${bmi} W:${questionnaire.weight}kg H:${questionnaire.height}cm
+Goals:${goalsText}
+Status:${questionnaire.healthStatus.join(',')}
+Complaints:${complaintsText}
+Diet:${questionnaire.dietaryHabits.join(',')}
+Stress:${questionnaire.stressLevel} Sleep:${questionnaire.sleepHours}h(${questionnaire.sleepQuality})
+Activity:${questionnaire.activityLevel}
+Meds:${questionnaire.medications || 'None'}
+Allergies:${questionnaire.allergies || 'None'}
 
-ПРОФИЛ НА ПАЦИЕНТА:
-Възраст: ${questionnaire.age} години
-Пол: ${genderName}
-BMI: ${bmi}
-Тегло: ${questionnaire.weight}кг, Ръст: ${questionnaire.height}см
-Основни цели: ${goalsText}
-Здравен статус: ${questionnaire.healthStatus.join(', ')}
-Оплаквания: ${complaintsText}
-Хранителни навици: ${questionnaire.dietaryHabits.join(', ')}
-Стрес: ${questionnaire.stressLevel}, Сън: ${questionnaire.sleepHours}ч (${questionnaire.sleepQuality})
-Активност: ${questionnaire.activityLevel}
-Медикаменти: ${questionnaire.medications || 'Няма'}
-Алергии: ${questionnaire.allergies || 'Няма'}
-
-ИРИДОЛОГИЧНА РЕФЕРЕНТНА КАРТА:
+IRIDOLOGY_REF:
 ${knowledgeContext}
 
-ЗАДАЧА:
-Анализирай ${sideName} ирис по часовниковата система (12:00 е горе) като ЗАДЪЛЖИТЕЛНО КОРЕЛИРАШ всяка находка с данните от въпросника:
+TASK: Analyze ${sideName} iris via clock_system (12:00=top). Correlate ALL findings w/ questionnaire.
 
-1. ЗОНИ (8-12 зони): Анализирай следните зони:
-   - 12:00 - Мозък, нервна система
-   - 2:00 - Щитовидна жлеза
-   - 3:00 - Белодробна система (десен=${side === 'right'})
-   - 4:00 - Черен дроб, жлъчка
-   - 5:00-6:00 - Стомах, панкреас
-   - 7:00-8:00 - Дебело черво
-   - 9:00 - Урогенитална система (ляв=${side === 'left'})
-   - 10:00 - Бъбреци
-   - 11:00 - Далак
-
-За всяка зона определи:
-- status: "normal" (всичко е добре), "attention" (нужно е внимание), "concern" (притеснително)
-- findings: конкретно описание на находките (до 60 символа)
-- angle: приблизителен ъгъл [start, end] в градуси (0-360)
-
-2. АРТЕФАКТИ (2-5 артефакта): Идентифицирай специфични белези:
+1. ZONES (8-12): Analyze key zones
+   12:00-Brain/Nervous 2:00-Thyroid 3:00-Lungs${side==='right'?'(R)':''} 4:00-Liver/Gallbladder
+   5:00-6:00-Stomach/Pancreas 7:00-8:00-Colon 9:00-Urogenital${side==='left'?'(L)':''} 10:00-Kidneys 11:00-Spleen
    
-   КРИТИЧНО ВАЖНО - ОТЛИЧАВАНЕ НА АРТЕФАКТИ ОТ СВЕТЛИННИ ОТРАЖЕНИЯ:
-   - Светлинните отражения са ЯРКО БЕЛИ, с остри ръбове, обикновено в центъра или на повърхността
-   - Светлинните отражения са СИМЕТРИЧНИ и често блестящи като огледало
-   - НЕ отчитай светлинни отражения/огледални ефекти като артефакти!
+Per zone: status(normal/attention/concern), findings(<60chr), angle[start,end](0-360deg)
+
+2. ARTIFACTS (2-5): ID real artifacts ONLY
+   EXCLUDE: bright_white reflections, mirror_effects, glare
+   INCLUDE: lacunae(dark_gaps), crypts(small_holes), pigment_spots(color!=base), 
+            radial_lines(center→out), autonomic_ring(circular_near_pupil)
    
-   РЕАЛНИ АРТЕФАКТИ за идентификация:
-   - Лакуни (празнини в ириса) - тъмни области с неравни ръбове
-   - Крипти (малки дупки) - малки тъмни точки вградени в структурата
-   - Пигментни петна - цветни петна (кафяви, жълти) различни от основния цвят
-   - Радиални линии - линии излизащи от центъра навън в ирисовата тъкан
-   - Автономен пръстен - кръгов пръстен около зеницата
-   
-За всеки РЕАЛЕН артефакт (НЕ светлинни отражения):
-- type: точен тип артефакт
-- location: позиция по часовника (напр. "3:00-4:00")
-- description: значение за здравето (до 60 символа)
-- severity: "low", "medium", "high"
+Per artifact: type, location(clock_pos), description(<60chr), severity(low/med/high)
 
-3. ОБЩО ЗДРАВЕ (overallHealth): Цяло число 0-100 базирано на:
-   - Състояние на зони
-   - Брой и тежест на артефакти
-   - Възраст и здравен статус
-   - Конституционен тип
+3. OVERALL_HEALTH: int 0-100 based on zones+artifacts+age+status
 
-4. СИСТЕМНИ ОЦЕНКИ (systemScores): 6 системи, всяка с оценка 0-100:
-   - Храносмилателна система
-   - Имунна система
-   - Нервна система
-   - Сърдечно-съдова система
-   - Детоксикационна система
-   - Ендокринна система
+4. SYSTEM_SCORES (6 systems, 0-100 each):
+   Digestive, Immune, Nervous, Cardiovascular, Detox, Endocrine
+   Per system: score(int), description(<60chr)
 
-За всяка система:
-- score: числова оценка
-- description: кратко състояние (до 60 символа)
+CONSISTENCY:
+- Use IMG_ID for deterministic results
+- Medical terminology
+- Correlate findings w/ patient profile
+- NO newlines in text fields
+- NO double quotes inside strings
 
-ПРАВИЛА ЗА КОНСИСТЕНТНОСТ:
-- Базирай анализа на Image ID за детерминистични резултати
-- Използвай точна медицинска терминология
-- Бъди специфичен и обективен
-- Свържи находките с профила на пациента
-- БЕЗ нови редове в текстове
-- БЕЗ двойни кавички вътре в текстове
-- Използвай единични кавички при нужда
+FORMAT_STRICT:
+- Return ONLY valid JSON object
+- NO markdown (NO \`\`\`json or \`\`\`)
+- NO extra text
+- Direct JSON response
 
-КРИТИЧНО ВАЖНО ЗА ФОРМАТ:
-- ВЪРНИ САМО ВАЛИДЕН JSON обект
-- НЕ използвай markdown (БЕЗ \`\`\`json или \`\`\`)
-- НЕ добавяй допълнителен текст
-- Директен JSON отговор
-
-ФОРМАТ:
+JSON:
 {
   "analysis": {
     "zones": [
-      {"id": 1, "name": "име на зона", "organ": "засегнат орган", "status": "normal/attention/concern", "findings": "описание до 60 символа", "angle": [0, 30]}
+      {"id": 1, "name": "zone_name", "organ": "affected_organ", "status": "normal/attention/concern", "findings": "desc<60chr", "angle": [0, 30]}
     ],
     "artifacts": [
-      {"type": "тип", "location": "3:00-4:00", "description": "значение до 60 символа", "severity": "low/medium/high"}
+      {"type": "artifact_type", "location": "3:00-4:00", "description": "meaning<60chr", "severity": "low/medium/high"}
     ],
     "overallHealth": 75,
     "systemScores": [
-      {"system": "Храносмилателна система", "score": 80, "description": "състояние до 60 символа"}
+      {"system": "Digestive_System", "score": 80, "description": "condition<60chr"}
     ]
   }
 }`
@@ -1037,82 +993,63 @@ JSON формат:
         .map(s => s.system)
         .join(', ')
       
-      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Създай ИЗКЛЮЧИТЕЛНО ДЕТАЙЛЕН и ПЕРСОНАЛИЗИРАН хранителен план на български език базиран на МУЛТИВАЛЕНТНА КОРЕЛАЦИЯ.
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`NUTRITION_PLAN | LANG:BG | PERSONALIZED
 
-КРИТИЧНО ВАЖНО - ПРАВИЛА ЗА ПРЕПОРЪКИ:
-1. Всяка препоръка ТРЯБВА да е базирана на КОРЕЛАЦИЯ между:
-   - Иридологични находки (органи, системи)
-   - Данни от въпросника (оплаквания, навици, статус)
-   - Цели на клиента
-   - Алергии и непоносимости
+CORRELATION_RULES:
+1. Base on: iris_findings + questionnaire + goals + allergies
+2. EXCLUDE: foods contradict status/allergies OR irrelevant to affected_zones
 
-2. НЕ препоръчвай храни които:
-   - Противоречат на здравния статус
-   - Са в списъка с алергии/непоносимости
-   - Не са релевантни към проблемните зони
+IRIS_FINDINGS:
+Affected_organs: ${uniqueOrgans}
+Weak_systems(<70): ${weakSystems || 'None'}
+Health: L${leftAnalysis.overallHealth}/100 R${rightAnalysis.overallHealth}/100
+Details: ${JSON.stringify(concernedOrgans.slice(0, 5))}
 
-ИРИДОЛОГИЧНИ НАХОДКИ:
-Проблемни органи/системи: ${uniqueOrgans}
-Слаби системи (под 70): ${weakSystems || 'Няма'}
-Общо здраве: Ляв ${leftAnalysis.overallHealth}/100, Десен ${rightAnalysis.overallHealth}/100
-Детайлни находки: ${JSON.stringify(concernedOrgans.slice(0, 5))}
+CLIENT:
+Age:${questionnaire.age} W:${questionnaire.weight}kg H:${questionnaire.height}cm BMI:${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
+Goals:${questionnaire.goals.join(',')}
+Status:${questionnaire.healthStatus.join(',')}
+Complaints:${questionnaire.complaints || 'None'}
+Diet_profile:${questionnaire.dietaryProfile.join(',')}
+Diet_habits:${questionnaire.dietaryHabits.join(',')}
+Intolerances:${questionnaire.foodIntolerances || 'None'}
+Meds:${questionnaire.medications || 'None'}
+Activity:${questionnaire.activityLevel}
+Hydration:${questionnaire.hydration}L
 
-ПАЦИЕНТ ПРОФИЛ:
-Възраст: ${questionnaire.age}
-Тегло: ${questionnaire.weight}кг, Ръст: ${questionnaire.height}см
-BMI: ${(questionnaire.weight / ((questionnaire.height / 100) ** 2)).toFixed(1)}
-Цели: ${questionnaire.goals.join(', ')}
-Здравен статус: ${questionnaire.healthStatus.join(', ')}
-Оплаквания: ${questionnaire.complaints || 'Няма'}
-Хранителен профил: ${questionnaire.dietaryProfile.join(', ')}
-Хранителни навици: ${questionnaire.dietaryHabits.join(', ')}
-Алергии/непоносимост: ${questionnaire.foodIntolerances || 'Няма'}
-Медикаменти: ${questionnaire.medications || 'Няма'}
-Активност: ${questionnaire.activityLevel}
-Хидратация: ${questionnaire.hydration}л
+TASK - Create JSON:
 
-Създай JSON с:
-
-1. generalRecommendations - масив от ТОЧНО 3 НАЙ-ВАЖНИ хранителни принципа:
-   - Всеки принцип да е свързан с конкретна находка от ириса + въпросника
-   - Обясни ЗАЩО този принцип е важен за ТОЗИ конкретен пациент
-   - Включи препоръки за време на хранене, комбинации, начин на приготвяне
+1. generalRecommendations - Array of 3 KEY principles:
+   - Link to iris finding + questionnaire
+   - Explain WHY important for THIS client
+   - Include timing, combinations, preparation
    
-2. recommendedFoods - масив от МИНИМУМ 10-15 ДЕТАЙЛНИ и КОНКРЕТНИ храни за консумация:
-   - Специфични имена (не общи категории) - напр. "Диворастъща сьомга", "Кейл (къдраво зеле)", "Киноа"
-   - Разнообразие от категории: зеленчуци, плодове, протеини, зърнени храни, мазнини
-   - Базирани на проблемни системи/органи от иридологичния анализ
-   - Съобразени с цели, активност, възраст
-   - Взети предвид алергии и непоносимости
-   - За всяка храна включи КРАТКО обяснение ЗАЩО е препоръчителна (в скоби)
-   - Пример формат: "Спанак (богат на желязо и магнезий за нервната система)"
+2. recommendedFoods - Array 10-15 SPECIFIC foods:
+   - Specific names (not categories) e.g. "Диворастъща сьомга", "Кейл", "Киноа"
+   - Variety: veggies, fruits, proteins, grains, fats
+   - Based on affected organs/systems
+   - Consider goals, activity, age
+   - Respect allergies/intolerances
+   - Format: "Спанак (богат на желязо и магнезий за нервната система)"
    
-3. avoidFoods - масив от МИНИМУМ 8-12 КОНКРЕТНИ храни за избягване:
-   - Специфични имена и категории
-   - Базирани на иридологични находки + здравен статус
-   - Храни които влошават състоянието на слабите системи
-   - Взети предвид медикаменти (взаимодействия)
-   - За всяка храна включи КРАТКО обяснение ЗАЩО трябва да се избягва (в скоби)
-   - Пример формат: "Рафинирана бяла захар (влошава възпалителни процеси и отслабва имунитета)"
+3. avoidFoods - Array 8-12 SPECIFIC foods to avoid:
+   - Specific names
+   - Based on iris + health status
+   - Foods worsening weak systems
+   - Consider med interactions
+   - Format: "Рафинирана бяла захар (влошава възпалителни процеси)"
 
-ВАЖНО:
-- Храните да са КОНКРЕТНИ (напр. "Диворастъща сьомга" вместо "риба")
-- Всяка препоръка да е ПЕРСОНАЛИЗИРАНА за този пациент
-- Корелирай находките с целите
-- Вземи предвид ВСИЧКИ данни от въпросника
+CRITICAL:
+- SPECIFIC foods (not generic)
+- PERSONALIZED for this client
+- Return ONLY valid JSON, NO markdown, NO extra text
 
-КРИТИЧНО ВАЖНО ЗА ФОРМАТ:
-- ВЪРНИ САМО ВАЛИДЕН JSON обект
-- НЕ използвай markdown (БЕЗ \`\`\`json или \`\`\`)
-- НЕ добавяй допълнителен текст
-- Директен JSON отговор
-
-JSON формат:
+JSON:
 {
   "foodPlan": {
-    "generalRecommendations": ["детайлна препоръка 1", "детайлна препоръка 2"],
-    "recommendedFoods": ["конкретна храна 1", "конкретна храна 2"],
-    "avoidFoods": ["конкретна храна 1", "конкретна храна 2"]
+    "generalRecommendations": ["препоръка 1", "препоръка 2", "препоръка 3"],
+    "recommendedFoods": ["храна 1 (причина)", "храна 2 (причина)", ...],
+    "avoidFoods": ["храна 1 (причина)", "храна 2 (причина)", ...]
   }
 }`
 
@@ -1154,50 +1091,65 @@ JSON формат:
         ...rightAnalysis.zones.filter(z => z.status !== 'normal')
       ]
       
-      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`Препоръчай ДЕТАЙЛНИ хранителни добавки с точна дозировка и прием на български език.
+      const prompt = (window.spark.llmPrompt as unknown as (strings: TemplateStringsArray, ...values: any[]) => string)`SUPPLEMENTS | LANG:BG | MAX 3
 
-КРИТИЧНО ВАЖНО - КОРЕЛАЦИЯ И БЕЗОПАСНОСТ:
-1. Всяка добавка ТРЯБВА да е базирана на КОРЕЛАЦИЯ между:
-   - Слаби системи от ириса
-   - Оплаквания и здравен статус от въпросника
-   - Цели на клиента
-   
-2. ВНИМАНИЕ към взаимодействия и ИЗБЯГВАНЕ НА ДУБЛИРАНЕ:
-   - Провери медикаменти за контраиндикации
-   - Вземи предвид здравни състояния
-   - Избягвай добавки които противоречат на данните
-   - КРИТИЧНО: НЕ препоръчвай добавки/вещества които пациентът ВЕЧЕ ПРИЕМА (виж "Медикаменти" по-долу)
-   - Прием на медикаменти или добавки НЕ е ограничаващ фактор сам по себе си - анализирай ЕФЕКТА им върху здравето
-   - Анализирай дали текущите медикаменти ПОМАГАТ или ВЛОШАВАТ състоянието базирано на иридологичния анализ
+CORRELATION SAFETY RULES:
+1. Base on: weak systems + complaints + goals
+2. CHECK CONTRAINDICATIONS: meds, health status
+3. CRITICAL: EXCLUDE already taking supplements (see Meds below)
+4. Meds/supplements intake is NOT limiting factor - analyze EFFECT on health
+5. IF current meds WORSEN iris findings → note & recommend doctor consult
+6. IF current supplements INSUFFICIENT per iris → recommend ADDITIONAL/DIFFERENT
 
-3. АНАЛИЗ НА ТЕКУЩО ПРИЕМАНИ ВЕЩЕСТВА:
-   Медикаменти/добавки: ${questionnaire.medications || 'Няма'}
-   - Ако пациентът ВЕЧЕ приема дадена добавка (напр. Магнезий, Витамин D и т.н.), НЕ я препоръчвай отново
-   - Ако някой медикамент ВЛОШАВА ирисовите находки, отбележи това и препоръчай консултация с лекар
-   - Ако текущите добавки са НЕДОСТАТЪЧНИ според иридологичния анализ, препоръчай ДОПЪЛНИТЕЛНИ или РАЗЛИЧНИ вещества
+CURRENT INTAKE ANALYSIS:
+Meds/Supplements: ${questionnaire.medications || 'None'}
+- IF already taking (e.g. Magnesium, Vit D) → DO NOT recommend again
+- IF med WORSENS iris → flag it & suggest doctor consult
+- IF current supplements INSUFFICIENT → recommend DIFFERENT ones
 
-ИРИДОЛОГИЧНИ НАХОДКИ:
-Слаби системи (детайлно): ${weakSystemsDetailed.map(s => `${s.system}: ${s.score}/100`).join(', ')}
-Засегнати зони: ${concernedZones.map(z => `${z.organ} (${z.status})`).join(', ')}
-Общо здраве: ${Math.round((leftAnalysis.overallHealth + rightAnalysis.overallHealth) / 2)}/100
+IRIS:
+Weak systems(<75): ${weakSystemsDetailed.map(s => `${s.system}:${s.score}/100`).join(',')}
+Affected zones: ${concernedZones.map(z => `${z.organ}(${z.status})`).join(',')}
+Health avg: ${Math.round((leftAnalysis.overallHealth + rightAnalysis.overallHealth) / 2)}/100
 
-ДАННИ ОТ ВЪПРОСНИК:
-Възраст: ${questionnaire.age}
-Здравен статус: ${questionnaire.healthStatus.join(', ')}
-Оплаквания: ${questionnaire.complaints || 'Няма'}
-Цели: ${questionnaire.goals.join(', ')}
-Медикаменти/добавки: ${questionnaire.medications || 'Няма'}
-Алергии: ${questionnaire.allergies || 'Няма'}
-Хранителен профил: ${questionnaire.dietaryProfile.join(', ')}
-Активност: ${questionnaire.activityLevel}
-Стрес: ${questionnaire.stressLevel}
-Сън: ${questionnaire.sleepHours}ч (${questionnaire.sleepQuality})
+CLIENT:
+Age:${questionnaire.age} Status:${questionnaire.healthStatus.join(',')}
+Complaints:${questionnaire.complaints || 'None'}
+Goals:${questionnaire.goals.join(',')}
+Meds:${questionnaire.medications || 'None'}
+Allergies:${questionnaire.allergies || 'None'}
+Diet:${questionnaire.dietaryProfile.join(',')}
+Activity:${questionnaire.activityLevel}
+Stress:${questionnaire.stressLevel}
+Sleep:${questionnaire.sleepHours}h(${questionnaire.sleepQuality})
 
-Създай 3 ПЕРСОНАЛИЗИРАНИ препоръки за хранителни добавки с:
+TASK: Create 3 PERSONALIZED supplement recommendations:
+- name: full name (e.g. "Магнезий Бисглицинат", "Витамин D3 + K2")
+  * DO NOT recommend if already taking!
+  * Check Meds/Supplements list before recommending
+- dosage: safe dose for age
+- timing: detailed intake instructions
+- notes: personalized explanation WHY this specific one
 
-- name: пълно име на добавката (напр. "Магнезий Бисглицинат", "Витамин D3 + K2")
-  * НЕ препоръчвай добавки които пациентът вече приема!
-  * Провери списъка "Медикаменти/добавки" преди препоръка
+IMPORTANT:
+- EXACTLY 3 supplements (NOT more)
+- Safe dosages for age
+- Consider ALL med interactions
+- Focus on CORRELATED problems
+- Avoid contraindications
+- CRITICAL: No duplicate of already taking supplements!
+
+Return ONLY valid JSON, NO markdown, NO extra text:
+{
+  "supplements": [
+    {
+      "name": "supplement name", 
+      "dosage": "specific dose", 
+      "timing": "detailed intake", 
+      "notes": "personalized explanation why"
+    }
+  ]
+}`
   
 - dosage: КОНКРЕТНА дозировка базирана на възраст и състояние (напр. "500-1000мг дневно")
 
