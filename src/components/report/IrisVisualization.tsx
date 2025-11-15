@@ -86,7 +86,6 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
             height="400" 
             viewBox="0 0 400 400" 
             className="max-w-full"
-            style={{ transform: side === 'right' ? 'scaleX(-1)' : 'none' }}
           >
             <circle
               cx={centerX}
@@ -117,33 +116,40 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
               strokeDasharray="4,4"
             />
 
-            {(analysis.zones || []).map((zone) => zone && (
-              <g key={zone.id}>
-                <path
-                  d={describeArc(centerX, centerY, radius, zone.angle?.[0] || 0, zone.angle?.[1] || 30)}
-                  fill={getColorForStatus(zone.status)}
-                  stroke={getStrokeForStatus(zone.status)}
-                  strokeWidth={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 3 : zone.status === 'normal' ? 1 : 2}
-                  opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 0.8}
-                  className="cursor-pointer transition-all"
-                  onMouseEnter={() => setHoveredZone(zone)}
-                  onMouseLeave={() => setHoveredZone(null)}
-                  onClick={() => setSelectedZone(zone)}
-                />
-                <text
-                  x={polarToCartesian(centerX, centerY, radius * 0.85, ((zone.angle?.[0] || 0) + (zone.angle?.[1] || 30)) / 2).x}
-                  y={polarToCartesian(centerX, centerY, radius * 0.85, ((zone.angle?.[0] || 0) + (zone.angle?.[1] || 30)) / 2).y}
-                  textAnchor="middle"
-                  fill="currentColor"
-                  fontSize="12"
-                  fontWeight="600"
-                  className="pointer-events-none"
-                  opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 1}
-                >
-                  {zone.id}
-                </text>
-              </g>
-            ))}
+            {(analysis.zones || []).map((zone) => {
+              if (!zone) return null
+              const midAngle = ((zone.angle?.[0] || 0) + (zone.angle?.[1] || 30)) / 2
+              const labelPos = polarToCartesian(centerX, centerY, radius * 0.85, midAngle)
+              
+              return (
+                <g key={zone.id}>
+                  <path
+                    d={describeArc(centerX, centerY, radius, zone.angle?.[0] || 0, zone.angle?.[1] || 30)}
+                    fill={getColorForStatus(zone.status)}
+                    stroke={getStrokeForStatus(zone.status)}
+                    strokeWidth={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 3 : zone.status === 'normal' ? 1 : 2}
+                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 0.8}
+                    className="cursor-pointer transition-all"
+                    onMouseEnter={() => setHoveredZone(zone)}
+                    onMouseLeave={() => setHoveredZone(null)}
+                    onClick={() => setSelectedZone(zone)}
+                  />
+                  <text
+                    x={labelPos.x}
+                    y={labelPos.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill="currentColor"
+                    fontSize="12"
+                    fontWeight="600"
+                    className="pointer-events-none"
+                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 1}
+                  >
+                    {zone.id}
+                  </text>
+                </g>
+              )
+            })}
 
             <circle
               cx={centerX}

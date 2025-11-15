@@ -48,18 +48,28 @@ export default function OverviewTab({ report, avgHealth }: OverviewTabProps) {
   }
 
   const getLifestyleMetrics = () => {
-    const sleepScore = report.questionnaireData.sleepHours >= 7 && 
-                       report.questionnaireData.sleepHours <= 9 && 
-                       (report.questionnaireData.sleepQuality === 'good' || 
-                        report.questionnaireData.sleepQuality === 'excellent')
+    const sleepHours = report.questionnaireData.sleepHours
+    const sleepQuality = report.questionnaireData.sleepQuality
+    
+    let sleepScore: 'good' | 'needs-attention' = 'good'
+    
+    if (sleepHours < 6 || sleepQuality === 'poor') {
+      sleepScore = 'needs-attention'
+    } else if (sleepHours < 7 || sleepQuality === 'fair') {
+      sleepScore = 'needs-attention'
+    } else if (sleepHours >= 7 && sleepHours <= 9 && (sleepQuality === 'good' || sleepQuality === 'excellent')) {
+      sleepScore = 'good'
+    } else if (sleepHours > 9) {
+      sleepScore = 'needs-attention'
+    }
     
     const metrics = [
       {
         icon: Moon,
         label: 'Сън',
-        value: `${report.questionnaireData.sleepHours}ч`,
-        quality: getSleepQualityLabel(report.questionnaireData.sleepQuality),
-        score: sleepScore ? 'good' : 'needs-attention'
+        value: `${sleepHours}ч`,
+        quality: getSleepQualityLabel(sleepQuality),
+        score: sleepScore
       },
       {
         icon: Drop,
