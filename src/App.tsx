@@ -9,9 +9,10 @@ import AnalysisScreen from '@/components/screens/AnalysisScreen'
 import ReportScreen from '@/components/screens/ReportScreen'
 import HistoryScreen from '@/components/screens/HistoryScreen'
 import AdminScreen from '@/components/screens/AdminScreen'
+import AboutAirisScreen from '@/components/screens/AboutAirisScreen'
 import type { QuestionnaireData, IrisImage, AnalysisReport } from '@/types'
 
-type Screen = 'welcome' | 'questionnaire' | 'upload' | 'analysis' | 'report' | 'history' | 'admin'
+type Screen = 'welcome' | 'questionnaire' | 'upload' | 'analysis' | 'report' | 'history' | 'admin' | 'about'
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome')
@@ -31,6 +32,10 @@ function App() {
 
   const handleAdminAccess = () => {
     setCurrentScreen('admin')
+  }
+
+  const handleAboutAccess = () => {
+    setCurrentScreen('about')
   }
 
   const handleTestStart = () => {
@@ -81,7 +86,7 @@ function App() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <WelcomeScreen onStart={handleStartAnalysis} onViewHistory={handleViewHistory} onAdmin={handleAdminAccess} onTestStart={handleTestStart} />
+            <WelcomeScreen onStart={handleStartAnalysis} onViewHistory={handleViewHistory} onAdmin={handleAdminAccess} onTestStart={handleTestStart} onAbout={handleAboutAccess} />
           </motion.div>
         )}
         {currentScreen === 'questionnaire' && (
@@ -157,6 +162,17 @@ function App() {
             transition={{ duration: 0.3 }}
           >
             <AdminScreen onBack={() => setCurrentScreen('welcome')} />
+          </motion.div>
+        )}
+        {currentScreen === 'about' && (
+          <motion.div
+            key="about"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <AboutAirisScreen onBack={() => setCurrentScreen('welcome')} />
           </motion.div>
         )}
       </AnimatePresence>

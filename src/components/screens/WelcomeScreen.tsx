@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Eye, Sparkle, Activity, FileText, ClockClockwise, Gear, Flask } from '@phosphor-icons/react'
+import { Eye, Sparkle, Activity, FileText, ClockClockwise, Gear, Flask, Info } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
@@ -11,9 +11,10 @@ interface WelcomeScreenProps {
   onViewHistory: () => void
   onAdmin: () => void
   onTestStart: () => void
+  onAbout: () => void
 }
 
-export default function WelcomeScreen({ onStart, onViewHistory, onAdmin, onTestStart }: WelcomeScreenProps) {
+export default function WelcomeScreen({ onStart, onViewHistory, onAdmin, onTestStart, onAbout }: WelcomeScreenProps) {
   const [isOwner, setIsOwner] = useState(false)
   const [questionnaireData] = useKV<QuestionnaireData | null>('questionnaire-data', null)
 
@@ -130,6 +131,17 @@ export default function WelcomeScreen({ onStart, onViewHistory, onAdmin, onTestS
                 Настройки
               </Button>
             )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={onAbout}
+              className="px-6 py-4 text-base font-medium gap-2 border border-primary/20 hover:bg-primary/5"
+            >
+              <Info size={20} weight="duotone" />
+              За airis – как работи системата
+            </Button>
           </div>
           {questionnaireData && (
             <div className="mt-6 flex justify-center">
