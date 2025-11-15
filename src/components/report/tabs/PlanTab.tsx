@@ -24,7 +24,6 @@ import type { AnalysisReport, SupplementRecommendation } from '@/types'
 import { cn } from '@/lib/utils'
 import NutritionChart from '../NutritionChart'
 import ActionTimeline from '../ActionTimeline'
-import InteractiveRecommendations from '../InteractiveRecommendations'
 
 interface PlanTabProps {
   report: AnalysisReport
@@ -94,16 +93,6 @@ export default function PlanTab({ report }: PlanTabProps) {
       >
         <ActionTimeline report={report} />
       </motion.div>
-
-      {report.recommendations && report.recommendations.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
-        >
-          <InteractiveRecommendations recommendations={report.recommendations} />
-        </motion.div>
-      )}
 
       <div className="space-y-2.5">
         {hasGeneralRecs && (

@@ -8,7 +8,8 @@ import {
   Share,
   Target,
   Activity,
-  ClipboardText
+  ClipboardText,
+  FloppyDisk
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -17,6 +18,7 @@ import OverviewTab from '@/components/report/tabs/OverviewTab'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import PlanTab from '@/components/report/tabs/PlanTab'
 import ErrorBoundary from '@/components/ErrorFallback'
+import { useKV } from '@github/spark/hooks'
 
 interface ReportScreenProps {
   report: AnalysisReport
@@ -26,6 +28,19 @@ interface ReportScreenProps {
 export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const avgHealth = Math.round((report.leftIris.overallHealth + report.rightIris.overallHealth) / 2)
+  const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
+  
+  const handleSaveToHistory = () => {
+    setHistory((current) => {
+      const existing = (current || []).find((r) => r.id === report.id)
+      if (existing) {
+        toast.info('Докладът вече е запазен в историята')
+        return current || []
+      }
+      toast.success('Докладът е запазен в историята')
+      return [report, ...(current || [])]
+    })
+  }
 
   const handleExport = async () => {
     try {
@@ -547,6 +562,17 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
               </div>
             </div>
             <div className="flex gap-2 flex-shrink-0">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleSaveToHistory} 
+                  className="h-9 w-9 p-0 hover:bg-green-500/10 hover:text-green-600 transition-colors"
+                  title="Запази в историята"
+                >
+                  <FloppyDisk size={18} />
+                </Button>
+              </motion.div>
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button 
                   variant="ghost" 

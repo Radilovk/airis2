@@ -52,14 +52,22 @@ export default function OverviewTab({ report, avgHealth }: OverviewTabProps) {
     const sleepQuality = report.questionnaireData.sleepQuality
     
     let sleepScore: 'good' | 'needs-attention' = 'good'
+    let sleepQualityText = getSleepQualityLabel(sleepQuality)
     
-    if (sleepHours < 6 || sleepQuality === 'poor') {
+    if (sleepHours < 6) {
       sleepScore = 'needs-attention'
-    } else if (sleepHours < 7 || sleepQuality === 'fair') {
+      sleepQualityText = 'Недостатъчен'
+    } else if (sleepHours < 7) {
       sleepScore = 'needs-attention'
-    } else if (sleepHours >= 7 && sleepHours <= 9 && (sleepQuality === 'good' || sleepQuality === 'excellent')) {
+      sleepQualityText = sleepQuality === 'excellent' || sleepQuality === 'good' ? 'Под оптималното' : sleepQualityText
+    } else if (sleepHours >= 7 && sleepHours <= 9) {
       sleepScore = 'good'
     } else if (sleepHours > 9) {
+      sleepScore = 'needs-attention'
+      sleepQualityText = 'Прекомерен'
+    }
+    
+    if (sleepQuality === 'poor') {
       sleepScore = 'needs-attention'
     }
     
@@ -68,7 +76,7 @@ export default function OverviewTab({ report, avgHealth }: OverviewTabProps) {
         icon: Moon,
         label: 'Сън',
         value: `${sleepHours}ч`,
-        quality: getSleepQualityLabel(sleepQuality),
+        quality: sleepQualityText,
         score: sleepScore
       },
       {
