@@ -215,20 +215,20 @@ function SupplementsSection({ supplements }: { supplements: SupplementRecommenda
                     <Pill size={18} weight="duotone" className="text-primary-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-bold text-base mb-2 text-primary">{supp.name}</h5>
+                    <h5 className="font-bold text-base mb-2 text-primary break-words">{supp.name}</h5>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start gap-2 p-2 bg-background/80 rounded-lg">
-                        <span className="font-semibold text-foreground min-w-[80px]">• Дозировка:</span>
-                        <span className="text-foreground/80">{supp.dosage}</span>
+                        <span className="font-semibold text-foreground min-w-[80px] flex-shrink-0">• Дозировка:</span>
+                        <span className="text-foreground/80 break-words">{supp.dosage}</span>
                       </div>
                       <div className="flex items-start gap-2 p-2 bg-background/80 rounded-lg">
-                        <span className="font-semibold text-foreground min-w-[80px]">• Прием:</span>
-                        <span className="text-foreground/80">{supp.timing}</span>
+                        <span className="font-semibold text-foreground min-w-[80px] flex-shrink-0">• Прием:</span>
+                        <span className="text-foreground/80 break-words">{supp.timing}</span>
                       </div>
                       {supp.notes && (
                         <div className="flex items-start gap-2 p-2.5 bg-accent/10 rounded-lg border border-accent/20 mt-2">
-                          <span className="font-semibold text-foreground min-w-[80px]">• Бележка:</span>
-                          <span className="italic text-foreground/80 text-sm leading-relaxed">{supp.notes}</span>
+                          <span className="font-semibold text-foreground min-w-[80px] flex-shrink-0">• Бележка:</span>
+                          <span className="italic text-foreground/80 text-sm leading-relaxed break-words">{supp.notes}</span>
                         </div>
                       )}
                     </div>
@@ -284,7 +284,7 @@ function CollapsibleSection({ section }: { section: PlanSection }) {
                 className="flex items-start gap-3 p-4 bg-card rounded-xl border-2 border-border/50 hover:border-primary/30 hover:shadow-md transition-all"
               >
                 <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
-                <p className="text-sm leading-relaxed flex-1">{item}</p>
+                <p className="text-sm leading-relaxed flex-1 break-words">{item}</p>
               </motion.div>
             ))}
           </div>
@@ -366,7 +366,7 @@ function FoodRecommendationsSection({
                         <CheckCircle size={16} weight="fill" className="text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-green-900 leading-relaxed block">{food}</span>
+                        <span className="text-sm font-medium text-green-900 leading-relaxed block break-words">{food}</span>
                       </div>
                       <div className="text-xs font-semibold text-green-600 flex-shrink-0 px-2 py-0.5 bg-green-100 rounded-full">
                         #{idx + 1}
@@ -404,7 +404,7 @@ function FoodRecommendationsSection({
                         <XCircle size={16} weight="fill" className="text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium text-red-900 leading-relaxed block">{food}</span>
+                        <span className="text-sm font-medium text-red-900 leading-relaxed block break-words">{food}</span>
                       </div>
                       <div className="text-xs font-semibold text-red-600 flex-shrink-0 px-2 py-0.5 bg-red-100 rounded-full">
                         #{idx + 1}
