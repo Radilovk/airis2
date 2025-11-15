@@ -1150,7 +1150,8 @@ Return ONLY valid JSON, NO markdown, NO extra text:
     }
   ]
 }`
-  
+/*REMOVE_START  
+
 - dosage: КОНКРЕТНА дозировка базирана на възраст и състояние (напр. "500-1000мг дневно")
 
 - timing: ДЕТАЙЛНО кога и как да се приема (напр. "Сутрин на гладно, 30 мин преди закуска, с вода")
@@ -1181,6 +1182,7 @@ Return ONLY valid JSON, NO markdown, NO extra text:
     }
   ]
 }`
+REMOVE_END*/
 
       const response = await callLLMWithRetry(prompt, true)
       const parsed = await robustJSONParse(response, 'SUPPLEMENTS')
