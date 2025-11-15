@@ -5,9 +5,10 @@ import type { IrisAnalysis, IrisZone } from '@/types'
 
 interface IrisVisualizationProps {
   analysis: IrisAnalysis
+  side?: 'left' | 'right'
 }
 
-export default function IrisVisualization({ analysis }: IrisVisualizationProps) {
+export default function IrisVisualization({ analysis, side = 'left' }: IrisVisualizationProps) {
   const [hoveredZone, setHoveredZone] = useState<IrisZone | null>(null)
   const [selectedZone, setSelectedZone] = useState<IrisZone | null>(null)
   
@@ -80,7 +81,13 @@ export default function IrisVisualization({ analysis }: IrisVisualizationProps) 
     <div className="w-full space-y-6">
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="flex-shrink-0">
-          <svg width="400" height="400" viewBox="0 0 400 400" className="max-w-full">
+          <svg 
+            width="400" 
+            height="400" 
+            viewBox="0 0 400 400" 
+            className="max-w-full"
+            style={{ transform: side === 'right' ? 'scaleX(-1)' : 'none' }}
+          >
             <circle
               cx={centerX}
               cy={centerY}

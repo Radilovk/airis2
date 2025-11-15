@@ -189,7 +189,7 @@ export default function IridologyTab({ report }: IridologyTabProps) {
                 </div>
               </div>
 
-              <IrisVisualization analysis={report.leftIris} />
+              <IrisVisualization analysis={report.leftIris} side="left" />
             </Card>
           </motion.div>
 
@@ -298,7 +298,7 @@ export default function IridologyTab({ report }: IridologyTabProps) {
                 </div>
               </div>
 
-              <IrisVisualization analysis={report.rightIris} />
+              <IrisVisualization analysis={report.rightIris} side="right" />
             </Card>
           </motion.div>
 
