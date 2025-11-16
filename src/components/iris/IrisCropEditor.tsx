@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsClockwise, Check, X } from '@phosphor-icons/react'
@@ -293,14 +292,15 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
     const img = imageRef.current
     
     if (!canvas || !img || !imageLoaded) {
-      console.error('Canvas или изображение не са готови')
+      console.error('❌ [CROP] Canvas или изображение не са готови')
       toast.error('Изображението все още не е заредено')
       return
     }
     
     try {
+      console.log('✂️ [CROP] Започване на crop операция...')
       const cropCanvas = document.createElement('canvas')
-      const cropSize = 600
+      const cropSize = 500
       cropCanvas.width = cropSize
       cropCanvas.height = cropSize
       const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: false })
@@ -325,185 +325,33 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
       
       cropCtx.restore()
       
+      console.log('✅ [CROP] Основното изображение нарисувано')
+      
       const finalizeCrop = () => {
         try {
-          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.85)
-          console.log(`Размер на cropped canvas изход: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.7)
+          console.log(`📊 [CROP] Размер на cropped изображение: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+          
+          if (croppedDataUrl.length > 300 * 1024) {
+            console.warn('⚠️ [CROP] Изображението е твърде голямо след crop')
+            toast.error('Изображението е твърде голямо. Моля, опитайте отново.')
+            return
+          }
+          
+          console.log('✅ [CROP] Извикване на onSave callback...')
           onSave(croppedDataUrl)
         } catch (error) {
-          console.error('Грешка при създаване на dataURL:', error)
+          console.error('❌ [CROP] Грешка при създаване на dataURL:', error)
           toast.error('Грешка при запазване на изображението')
         }
       }
       
-      if (customOverlayRef.current) {
-        const overlayImg = new Image()
-        
-        const overlayTimeout = setTimeout(() => {
-          console.warn('Timeout при зареждане на overlay')
-          finalizeCrop()
-        }, 5000)
-        
-        overlayImg.onload = () => {
-          clearTimeout(overlayTimeout)
-          try {
-            cropCtx.globalAlpha = 0.6
-            cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
-            cropCtx.globalAlpha = 1.0
-            finalizeCrop()
-          } catch (error) {
-            console.error('Грешка при рисуване на overlay:', error)
-            finalizeCrop()
-          }
-        }
-        
-        overlayImg.onerror = () => {
-          clearTimeout(overlayTimeout)
-          console.warn('Грешка при зареждане на overlay, продължава без него')
-          finalizeCrop()
-        }
-        
-        overlayImg.src = customOverlayRef.current.dataUrl
-      } else {
-        const overlayDiv = document.createElement('div')
-        overlayDiv.style.position = 'absolute'
-        overlayDiv.style.left = '-9999px'
-        document.body.appendChild(overlayDiv)
-        
-        try {
-          const root = document.createElement('div')
-          overlayDiv.appendChild(root)
-          
-          const svgContainer = document.createElement('div')
-          svgContainer.innerHTML = `
-            <svg width="${cropSize}" height="${cropSize}" viewBox="0 0 ${cropSize} ${cropSize}" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <radialGradient id="glowGradient" cx="50%" cy="50%">
-                  <stop offset="0%" stop-color="rgba(59, 130, 246, 0.3)" />
-                  <stop offset="50%" stop-color="rgba(59, 130, 246, 0.15)" />
-                  <stop offset="100%" stop-color="rgba(59, 130, 246, 0.05)" />
-                </radialGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-                <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
-                  <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(59, 130, 246, 0.1)" stroke-width="1"/>
-                </pattern>
-              </defs>
-              ${generateOverlaySVGContent(cropSize)}
-            </svg>
-          `
-          
-          const svgElement = svgContainer.querySelector('svg')
-          if (!svgElement) {
-            document.body.removeChild(overlayDiv)
-            finalizeCrop()
-            return
-          }
-          
-          const svgData = new XMLSerializer().serializeToString(svgElement)
-          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-          const svgUrl = URL.createObjectURL(svgBlob)
-          
-          const overlayImg = new Image()
-          
-          const svgTimeout = setTimeout(() => {
-            console.warn('Timeout при зареждане на SVG overlay')
-            URL.revokeObjectURL(svgUrl)
-            document.body.removeChild(overlayDiv)
-            finalizeCrop()
-          }, 5000)
-          
-          overlayImg.onload = () => {
-            clearTimeout(svgTimeout)
-            try {
-              cropCtx.globalAlpha = 0.6
-              cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
-              cropCtx.globalAlpha = 1.0
-              
-              URL.revokeObjectURL(svgUrl)
-              document.body.removeChild(overlayDiv)
-              
-              finalizeCrop()
-            } catch (error) {
-              console.error('Грешка при рисуване на SVG:', error)
-              URL.revokeObjectURL(svgUrl)
-              document.body.removeChild(overlayDiv)
-              finalizeCrop()
-            }
-          }
-          
-          overlayImg.onerror = () => {
-            clearTimeout(svgTimeout)
-            console.warn('Грешка при зареждане на SVG, продължава без overlay')
-            URL.revokeObjectURL(svgUrl)
-            document.body.removeChild(overlayDiv)
-            finalizeCrop()
-          }
-          
-          overlayImg.src = svgUrl
-        } catch (error) {
-          console.error('Грешка при създаване на SVG overlay:', error)
-          document.body.removeChild(overlayDiv)
-          finalizeCrop()
-        }
-      }
+      console.log('🎨 [CROP] Пропускане на overlay рисуване за по-бърза обработка')
+      finalizeCrop()
     } catch (error) {
-      console.error('Фатална грешка при запазване:', error)
+      console.error('❌ [CROP] Фатална грешка при запазване:', error)
       toast.error('Грешка при обработка на изображението')
     }
-  }
-  
-  const generateOverlaySVGContent = (size: number) => {
-    const radius = size / 2
-    const pupilRadius = radius * 0.3
-    const innerRadius = radius * 0.55
-    const middleRadius = radius * 0.75
-    const outerRadius = radius * 0.95
-    const sectors = 12
-    const angleStep = 360 / sectors
-    
-    const sectorLines = Array.from({ length: sectors }).map((_, i) => {
-      const angle = (angleStep * i - 90) * (Math.PI / 180)
-      const x1 = radius + pupilRadius * Math.cos(angle)
-      const y1 = radius + pupilRadius * Math.sin(angle)
-      const x2 = radius + outerRadius * Math.cos(angle)
-      const y2 = radius + outerRadius * Math.sin(angle)
-      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(59, 130, 246, 0.3)" stroke-width="1" filter="url(#glow)"/>`
-    }).join('')
-    
-    const corners = [
-      [20, 20, 0],
-      [size - 20, 20, 90],
-      [size - 20, size - 20, 180],
-      [20, size - 20, 270]
-    ].map(([x, y, rotation]) => `
-      <g transform="translate(${x}, ${y}) rotate(${rotation})">
-        <line x1="0" y1="0" x2="15" y2="0" stroke="rgba(59, 130, 246, 0.6)" stroke-width="2" />
-        <line x1="0" y1="0" x2="0" y2="15" stroke="rgba(59, 130, 246, 0.6)" stroke-width="2" />
-      </g>
-    `).join('')
-    
-    return `
-      <circle cx="${radius}" cy="${radius}" r="${outerRadius}" fill="url(#glowGradient)" opacity="0.4"/>
-      <circle cx="${radius}" cy="${radius}" r="${outerRadius}" fill="url(#scanlines)" opacity="0.3"/>
-      <circle cx="${radius}" cy="${radius}" r="${pupilRadius}" fill="none" stroke="rgba(59, 130, 246, 0.6)" stroke-width="2" filter="url(#glow)"/>
-      <circle cx="${radius}" cy="${radius}" r="${innerRadius}" fill="none" stroke="rgba(59, 130, 246, 0.5)" stroke-width="2" stroke-dasharray="5,3" filter="url(#glow)"/>
-      <circle cx="${radius}" cy="${radius}" r="${middleRadius}" fill="none" stroke="rgba(59, 130, 246, 0.4)" stroke-width="1.5" stroke-dasharray="8,4" filter="url(#glow)"/>
-      <circle cx="${radius}" cy="${radius}" r="${outerRadius}" fill="none" stroke="rgba(59, 130, 246, 0.7)" stroke-width="3" filter="url(#glow)"/>
-      ${sectorLines}
-      <line x1="${radius - 10}" y1="${radius}" x2="${radius + 10}" y2="${radius}" stroke="rgba(59, 130, 246, 0.5)" stroke-width="1"/>
-      <line x1="${radius}" y1="${radius - 10}" x2="${radius}" y2="${radius + 10}" stroke="rgba(59, 130, 246, 0.5)" stroke-width="1"/>
-      ${corners}
-      <circle cx="${radius}" cy="${radius}" r="3" fill="rgba(59, 130, 246, 0.9)" filter="url(#glow)">
-        <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values="0.9;0.5;0.9" dur="2s" repeatCount="indefinite"/>
-      </circle>
-    `
   }
   
   return (

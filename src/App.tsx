@@ -14,6 +14,7 @@ import AboutAirisScreen from '@/components/screens/AboutAirisScreen'
 import DiagnosticScreen from '@/components/screens/DiagnosticScreen'
 import QuickDebugPanel from '@/components/QuickDebugPanel'
 import { errorLogger } from '@/lib/error-logger'
+import { estimateStorageUsage, estimateDataSize } from '@/lib/storage-utils'
 import type { QuestionnaireData, IrisImage, AnalysisReport } from '@/types'
 
 type Screen = 'welcome' | 'questionnaire' | 'upload' | 'analysis' | 'report' | 'history' | 'admin' | 'about' | 'diagnostics'
@@ -29,6 +30,13 @@ function App() {
 
   useEffect(() => {
     errorLogger.info('APP_MOUNT', 'Application mounted successfully')
+    
+    estimateStorageUsage().then(usage => {
+      if (usage > 80) {
+        errorLogger.warning('APP_MOUNT', 'Storage usage is high', { usage: `${usage.toFixed(1)}%` })
+        console.warn(`⚠️ [APP] Storage usage is high: ${usage.toFixed(1)}%`)
+      }
+    })
     
     return () => {
       errorLogger.info('APP_UNMOUNT', 'Application unmounting')
@@ -68,8 +76,8 @@ function App() {
 
   const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
     errorLogger.info('APP_IMAGES_COMPLETE', 'handleImagesComplete called', {
-      leftSize: left.dataUrl.length,
-      rightSize: right.dataUrl.length,
+      leftSize: Math.round(left.dataUrl.length / 1024),
+      rightSize: Math.round(right.dataUrl.length / 1024),
       currentScreen,
       lockStatus: screenTransitionLockRef.current
     })
@@ -91,6 +99,39 @@ function App() {
         throw new Error('Невалиден формат на изображението')
       }
 
+      const leftSize = estimateDataSize(left)
+      const rightSize = estimateDataSize(right)
+      const totalSize = leftSize + rightSize
+
+      console.log(`📊 [APP] Total image data size: ${Math.round(totalSize / 1024)} KB`)
+
+      if (left.dataUrl.length > 300 * 1024) {
+        errorLogger.warning('APP_IMAGES_COMPLETE', 'Left image is too large', {
+          size: Math.round(left.dataUrl.length / 1024)
+        })
+        toast.error('Лявото изображение е твърде голямо. Моля, опитайте с по-малка снимка.')
+        screenTransitionLockRef.current = false
+        return
+      }
+
+      if (right.dataUrl.length > 300 * 1024) {
+        errorLogger.warning('APP_IMAGES_COMPLETE', 'Right image is too large', {
+          size: Math.round(right.dataUrl.length / 1024)
+        })
+        toast.error('Дясното изображение е твърде голямо. Моля, опитайте с по-малка снимка.')
+        screenTransitionLockRef.current = false
+        return
+      }
+
+      const storageUsage = await estimateStorageUsage()
+      if (storageUsage > 90) {
+        const usagePercent = `${storageUsage.toFixed(1)}%`
+        errorLogger.error('APP_IMAGES_COMPLETE', 'Storage is almost full', undefined, { usage: usagePercent })
+        toast.error('Няма достатъчно място в паметта. Моля, изчистете стари анализи от историята.')
+        screenTransitionLockRef.current = false
+        return
+      }
+
       errorLogger.info('APP_IMAGES_COMPLETE', 'Image validation successful')
       
       leftIrisRef.current = left
@@ -98,7 +139,11 @@ function App() {
       
       errorLogger.info('APP_IMAGES_COMPLETE', 'Images saved to refs, waiting before screen transition')
       
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      if (!leftIrisRef.current || !rightIrisRef.current) {
+        throw new Error('Изображенията не са правилно запазени')
+      }
       
       errorLogger.info('APP_IMAGES_COMPLETE', 'Transitioning to analysis screen')
       setCurrentScreen('analysis')
@@ -107,12 +152,14 @@ function App() {
       setTimeout(() => {
         screenTransitionLockRef.current = false
         errorLogger.info('APP_IMAGES_COMPLETE', 'Lock released after transition')
-      }, 500)
+      }, 1000)
     } catch (error) {
       screenTransitionLockRef.current = false
       errorLogger.error('APP_IMAGES_COMPLETE', 'Error processing images', error as Error, {
         leftValid: !!left?.dataUrl,
-        rightValid: !!right?.dataUrl
+        rightValid: !!right?.dataUrl,
+        leftSize: left?.dataUrl ? Math.round(left.dataUrl.length / 1024) : 0,
+        rightSize: right?.dataUrl ? Math.round(right.dataUrl.length / 1024) : 0
       })
       toast.error('Грешка при обработка на изображенията. Опитайте отново.')
     }
