@@ -16,8 +16,9 @@ interface ImageUploadScreenProps {
 }
 
 export default function ImageUploadScreen({ onComplete, initialLeft = null, initialRight = null }: ImageUploadScreenProps) {
-  const [leftImage, setLeftImage] = useState<IrisImage | null>(initialLeft)
-  const [rightImage, setRightImage] = useState<IrisImage | null>(initialRight)
+  const leftImageRef = useRef<IrisImage | null>(initialLeft)
+  const rightImageRef = useRef<IrisImage | null>(initialRight)
+  const [imagesVersion, setImagesVersion] = useState(0)
   const [editingSide, setEditingSide] = useState<'left' | 'right' | null>(null)
   const [tempImageData, setTempImageData] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -277,7 +278,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       const savedSide = editingSide
       
       console.log(`💾 [UPLOAD] Saving ${savedSide} iris (final size: ${Math.round(finalImage.length / 1024)} KB)...`)
-      console.log('🧹 [UPLOAD] Clearing temp data before saving to state...')
+      console.log('🧹 [UPLOAD] Clearing temp data before saving to ref...')
       
       setTempImageData(null)
       setEditingSide(null)
@@ -285,27 +286,29 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       await new Promise(resolve => setTimeout(resolve, 50))
       
       if (!isMountedRef.current) {
-        console.warn('⚠️ [UPLOAD] Component unmounted before state save, aborting')
+        console.warn('⚠️ [UPLOAD] Component unmounted before ref save, aborting')
         return
       }
       
-      console.log(`💾 [UPLOAD] Setting ${savedSide} image in state NOW...`)
+      console.log(`💾 [UPLOAD] Setting ${savedSide} image in ref NOW...`)
       
       if (savedSide === 'left') {
-        console.log('💾 [UPLOAD] Calling setLeftImage()...')
-        setLeftImage(image)
-        console.log('✅ [UPLOAD] setLeftImage() called')
+        console.log('💾 [UPLOAD] Setting leftImageRef.current...')
+        leftImageRef.current = image
+        console.log('✅ [UPLOAD] leftImageRef.current set')
       } else {
-        console.log('💾 [UPLOAD] Calling setRightImage()...')
-        setRightImage(image)
-        console.log('✅ [UPLOAD] setRightImage() called')
+        console.log('💾 [UPLOAD] Setting rightImageRef.current...')
+        rightImageRef.current = image
+        console.log('✅ [UPLOAD] rightImageRef.current set')
       }
+      
+      setImagesVersion(v => v + 1)
       
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      console.log(`💾 [UPLOAD] State update should be complete. Verifying...`)
-      console.log(`📊 [UPLOAD] leftImage exists: ${!!leftImage}`)
-      console.log(`📊 [UPLOAD] rightImage exists: ${!!rightImage}`)
+      console.log(`💾 [UPLOAD] Ref update complete. Verifying...`)
+      console.log(`📊 [UPLOAD] leftImageRef.current exists: ${!!leftImageRef.current}`)
+      console.log(`📊 [UPLOAD] rightImageRef.current exists: ${!!rightImageRef.current}`)
       
       setIsProcessing(false)
       console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Left' : 'Right'} iris saved successfully`)
@@ -332,7 +335,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleEditImage = (side: 'left' | 'right') => {
-    const image = side === 'left' ? leftImage : rightImage
+    const image = side === 'left' ? leftImageRef.current : rightImageRef.current
     if (!image) return
     
     setTempImageData(image.dataUrl)
@@ -348,6 +351,9 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleNext = async () => {
+    const leftImage = leftImageRef.current
+    const rightImage = rightImageRef.current
+    
     errorLogger.info('UPLOAD_NEXT', 'handleNext() called', {
       leftImage: !!leftImage,
       rightImage: !!rightImage,
@@ -440,10 +446,11 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
 
   const removeImage = (side: 'left' | 'right') => {
     if (side === 'left') {
-      setLeftImage(null)
+      leftImageRef.current = null
     } else {
-      setRightImage(null)
+      rightImageRef.current = null
     }
+    setImagesVersion(v => v + 1)
   }
 
   return (
@@ -489,11 +496,12 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
+              key={`left-${imagesVersion}`}
             >
               <Card className="p-6">
                 <Label className="text-lg font-semibold mb-4 block">Ляв Ирис</Label>
                 
-                {!leftImage ? (
+                {!leftImageRef.current ? (
                   <div
                     className={`border-2 border-dashed border-border rounded-lg p-8 text-center transition-colors ${
                       isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-muted/50'
@@ -523,7 +531,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
                 ) : (
                   <div className="relative group">
                     <img
-                      src={leftImage.dataUrl}
+                      src={leftImageRef.current.dataUrl}
                       alt="Ляв ирис"
                       className="w-full h-64 object-cover rounded-lg"
                     />
@@ -559,11 +567,12 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
+              key={`right-${imagesVersion}`}
             >
               <Card className="p-6">
                 <Label className="text-lg font-semibold mb-4 block">Десен Ирис</Label>
                 
-                {!rightImage ? (
+                {!rightImageRef.current ? (
                   <div
                     className={`border-2 border-dashed border-border rounded-lg p-8 text-center transition-colors ${
                       isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-muted/50'
@@ -593,7 +602,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
                 ) : (
                   <div className="relative group">
                     <img
-                      src={rightImage.dataUrl}
+                      src={rightImageRef.current.dataUrl}
                       alt="Десен ирис"
                       className="w-full h-64 object-cover rounded-lg"
                     />
@@ -635,7 +644,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
             <Button
               size="lg"
               onClick={handleNext}
-              disabled={!leftImage || !rightImage || isProcessing || editingSide !== null || isSaving}
+              disabled={!leftImageRef.current || !rightImageRef.current || isProcessing || editingSide !== null || isSaving}
               className="gap-2"
             >
               {isSaving ? 'Запазване...' : 'Започни Анализ'}
