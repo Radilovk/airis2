@@ -60,7 +60,7 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
-        const width = Math.min(containerRef.current.clientWidth - 32, 500)
+        const width = Math.min(containerRef.current.clientWidth - 32, 400)
         setCanvasSize({ width, height: width })
       }
     }
@@ -300,7 +300,7 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
     
     try {
       const cropCanvas = document.createElement('canvas')
-      const cropSize = 800
+      const cropSize = 600
       cropCanvas.width = cropSize
       cropCanvas.height = cropSize
       const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: false })
@@ -327,7 +327,8 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
       
       const finalizeCrop = () => {
         try {
-          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.92)
+          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.85)
+          console.log(`Размер на cropped canvas изход: ${Math.round(croppedDataUrl.length / 1024)} KB`)
           onSave(croppedDataUrl)
         } catch (error) {
           console.error('Грешка при създаване на dataURL:', error)

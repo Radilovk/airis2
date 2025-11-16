@@ -20,6 +20,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
   const [editingSide, setEditingSide] = useState<'left' | 'right' | null>(null)
   const [tempImageData, setTempImageData] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const isMountedRef = useRef(true)
   
   const leftInputRef = useRef<HTMLInputElement>(null)
@@ -40,7 +41,43 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
     }
   }, [])
 
-  const handleFileSelect = (side: 'left' | 'right', file: File) => {
+  const compressImage = async (dataUrl: string, maxWidth: number = 1200, quality: number = 0.85): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            reject(new Error('Не може да се създаде canvas context'))
+            return
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+          resolve(compressedDataUrl)
+        } catch (error) {
+          reject(error)
+        }
+      }
+      img.onerror = () => reject(new Error('Грешка при зареждане на изображението'))
+      img.src = dataUrl
+    })
+  }
+
+  const handleFileSelect = async (side: 'left' | 'right', file: File) => {
     if (!file) {
       console.warn('Няма избран файл')
       return
@@ -69,7 +106,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
     const reader = new FileReader()
     fileReaderRef.current = reader
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       if (!isMountedRef.current) {
         return
       }
@@ -85,7 +122,17 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
           throw new Error('Невалиден формат на изображението')
         }
 
-        setTempImageData(dataUrl)
+        console.log(`Оригинален размер на изображението: ${Math.round(dataUrl.length / 1024)} KB`)
+        
+        const compressedDataUrl = await compressImage(dataUrl, 1200, 0.85)
+        
+        console.log(`Компресиран размер: ${Math.round(compressedDataUrl.length / 1024)} KB`)
+        
+        if (!isMountedRef.current) {
+          return
+        }
+
+        setTempImageData(compressedDataUrl)
         setEditingSide(side)
         setIsProcessing(false)
       } catch (error) {
@@ -115,7 +162,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
     }
   }
 
-  const handleCropSave = (croppedDataUrl: string) => {
+  const handleCropSave = async (croppedDataUrl: string) => {
     if (!editingSide) {
       console.warn('Липсва информация за страна на ириса')
       return
@@ -134,8 +181,22 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
         throw new Error('Невалиден формат на обработеното изображение')
       }
       
-      const image: IrisImage = { dataUrl: croppedDataUrl, side: editingSide }
+      console.log(`Размер на cropped изображение преди компресия: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+      
+      const compressedDataUrl = await compressImage(croppedDataUrl, 1200, 0.85)
+      
+      console.log(`Размер на cropped изображение след компресия: ${Math.round(compressedDataUrl.length / 1024)} KB`)
+      
+      if (!isMountedRef.current) {
+        return
+      }
+      
+      const image: IrisImage = { dataUrl: compressedDataUrl, side: editingSide }
       const savedSide = editingSide
+      
+      setTempImageData(null)
+      
+      await new Promise(resolve => setTimeout(resolve, 50))
       
       if (savedSide === 'left') {
         setLeftImage(image)
@@ -144,7 +205,6 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
       }
       
       setEditingSide(null)
-      setTempImageData(null)
       setIsProcessing(false)
       
       toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
@@ -179,12 +239,37 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!leftImage || !rightImage) {
       toast.error('Моля, качете и двете снимки')
       return
     }
-    onComplete(leftImage, rightImage)
+    
+    if (isProcessing) {
+      toast.error('Моля, изчакайте обработката да завърши')
+      return
+    }
+    
+    if (editingSide !== null) {
+      toast.error('Моля, завършете редакцията на текущото изображение')
+      return
+    }
+    
+    if (isSaving) {
+      console.log('Запазването вече е започнало')
+      return
+    }
+    
+    try {
+      setIsSaving(true)
+      console.log('Преминаване към анализ с изображения...')
+      await new Promise(resolve => setTimeout(resolve, 100))
+      onComplete(leftImage, rightImage)
+    } catch (error) {
+      console.error('Грешка при преминаване към анализ:', error)
+      toast.error('Грешка при преминаване към анализ')
+      setIsSaving(false)
+    }
   }
 
   const removeImage = (side: 'left' | 'right') => {
@@ -257,7 +342,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
                     <input
                       ref={leftInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
                       className="hidden"
                       disabled={isProcessing}
                       onChange={(e) => {
@@ -327,7 +412,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
                     <input
                       ref={rightInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
                       className="hidden"
                       disabled={isProcessing}
                       onChange={(e) => {
@@ -384,10 +469,10 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
             <Button
               size="lg"
               onClick={handleNext}
-              disabled={!leftImage || !rightImage || isProcessing || editingSide !== null}
+              disabled={!leftImage || !rightImage || isProcessing || editingSide !== null || isSaving}
               className="gap-2"
             >
-              Започни Анализ
+              {isSaving ? 'Запазване...' : 'Започни Анализ'}
               <ArrowRight size={20} weight="bold" />
             </Button>
           </motion.div>

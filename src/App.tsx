@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
 import WelcomeScreen from '@/components/screens/WelcomeScreen'
 import QuestionnaireScreen from '@/components/screens/QuestionnaireScreen'
 import ImageUploadScreen from '@/components/screens/ImageUploadScreen'
@@ -55,10 +56,27 @@ function App() {
     setTimeout(() => setCurrentScreen('upload'), 50)
   }
 
-  const handleImagesComplete = (left: IrisImage, right: IrisImage) => {
-    setLeftIris(() => left)
-    setRightIris(() => right)
-    setTimeout(() => setCurrentScreen('analysis'), 100)
+  const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
+    try {
+      console.log('Запазване на изображения в storage...')
+      console.log(`Ляв ирис размер: ${Math.round(left.dataUrl.length / 1024)} KB`)
+      console.log(`Десен ирис размер: ${Math.round(right.dataUrl.length / 1024)} KB`)
+      
+      if (!left.dataUrl || !right.dataUrl) {
+        throw new Error('Невалидни данни на изображенията')
+      }
+      
+      setLeftIris(() => left)
+      setRightIris(() => right)
+      
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      console.log('Изображенията са запазени успешно')
+      setCurrentScreen('analysis')
+    } catch (error) {
+      console.error('Грешка при запазване на изображенията:', error)
+      toast.error('Грешка при запазване на изображенията')
+    }
   }
 
   const handleAnalysisComplete = (report: AnalysisReport) => {
