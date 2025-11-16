@@ -27,19 +27,35 @@ function App() {
   const leftIrisRef = useRef<IrisImage | null>(null)
   const rightIrisRef = useRef<IrisImage | null>(null)
   const [imagesReady, setImagesReady] = useState(false)
-  const [analysisReport, setAnalysisReport] = useKV<AnalysisReport | null>('analysis-report', null)
+  const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null)
   const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
   const screenTransitionLockRef = useRef(false)
 
   useEffect(() => {
     errorLogger.info('APP_MOUNT', 'Application mounted successfully')
     
-    estimateStorageUsage().then(usage => {
-      if (usage > 80) {
-        errorLogger.warning('APP_MOUNT', 'Storage usage is high', { usage: `${usage.toFixed(1)}%` })
-        console.warn(`⚠️ [APP] Storage usage is high: ${usage.toFixed(1)}%`)
+    const initializeApp = async () => {
+      try {
+        const { autoCleanupOnStartup } = await import('@/lib/storage-cleanup')
+        const cleanupResult = await autoCleanupOnStartup()
+        
+        if (cleanupResult.cleaned > 0) {
+          console.log(`✅ [APP] Автоматично изтрити ${cleanupResult.cleaned} стари изображения от storage`)
+          errorLogger.info('APP_CLEANUP', `Auto-cleaned ${cleanupResult.cleaned} old images from storage`)
+        }
+      } catch (error) {
+        console.error('❌ [APP] Грешка при auto-cleanup:', error)
       }
-    })
+      
+      estimateStorageUsage().then(usage => {
+        if (usage > 80) {
+          errorLogger.warning('APP_MOUNT', 'Storage usage is high', { usage: `${usage.toFixed(1)}%` })
+          console.warn(`⚠️ [APP] Storage usage is high: ${usage.toFixed(1)}%`)
+        }
+      })
+    }
+    
+    initializeApp()
     
     return () => {
       errorLogger.info('APP_UNMOUNT', 'Application unmounting')
@@ -230,8 +246,8 @@ function App() {
       console.log(`📊 [APP] Размер на ляво изображение: ${report.leftIrisImage.dataUrl.length} символа`)
       console.log(`📊 [APP] Размер на дясно изображение: ${report.rightIrisImage.dataUrl.length} символа`)
       
-      console.log('💾 [APP] Записване на ПЪЛЕН репорт в currentReport (с изображения)...')
-      setAnalysisReport(() => report)
+      console.log('💾 [APP] Записване на ПЪЛЕН репорт в STATE (НЕ в storage, само в памет)...')
+      setAnalysisReport(report)
       
       console.log('📋 [APP] Създаване на "лека" версия на репорт за история (БЕЗ изображения)...')
       const lightReport: AnalysisReport = {
@@ -241,7 +257,7 @@ function App() {
       }
       
       console.log(`📊 [APP] Размер на "лек" репорт: ${JSON.stringify(lightReport).length} символа`)
-      console.log('💾 [APP] Записване на "лек" репорт в история...')
+      console.log('💾 [APP] Записване на "лек" репорт в история (persistent storage)...')
       setHistory((current) => [lightReport, ...(current || [])])
       
       console.log('⏳ [APP] Малка пауза преди преминаване към report екран...')
@@ -257,7 +273,7 @@ function App() {
 
   const handleViewReport = (report: AnalysisReport) => {
     try {
-      setAnalysisReport(() => report)
+      setAnalysisReport(report)
       setTimeout(() => setCurrentScreen('report'), 50)
     } catch (error) {
       console.error('Грешка при показване на репорт:', error)
@@ -270,7 +286,7 @@ function App() {
     leftIrisRef.current = null
     rightIrisRef.current = null
     setImagesReady(false)
-    setAnalysisReport(() => null)
+    setAnalysisReport(null)
     setTimeout(() => setCurrentScreen('welcome'), 50)
   }
 
