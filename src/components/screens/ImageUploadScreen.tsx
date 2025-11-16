@@ -190,46 +190,66 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleCropSave = async (croppedDataUrl: string) => {
-    console.log('✂️ [UPLOAD] handleCropSave() извикан')
+    console.log('✂️ [UPLOAD] ========== handleCropSave CALLED ==========')
+    console.log(`📊 [UPLOAD] croppedDataUrl type: ${typeof croppedDataUrl}`)
+    console.log(`📊 [UPLOAD] croppedDataUrl length: ${croppedDataUrl?.length || 0}`)
+    console.log(`📊 [UPLOAD] croppedDataUrl first 50 chars: ${croppedDataUrl?.substring(0, 50)}`)
     console.log(`📊 [UPLOAD] editingSide: ${editingSide}`)
+    console.log(`📊 [UPLOAD] isMounted: ${isMountedRef.current}`)
     
     if (!editingSide) {
-      console.warn('⚠️ [UPLOAD] Липсва информация за страна на ириса')
+      console.error('❌ [UPLOAD] CRITICAL: editingSide is null!')
+      errorLogger.error('UPLOAD_CROP_SAVE', 'CRITICAL: editingSide is null!', undefined, {
+        croppedDataUrlLength: croppedDataUrl?.length || 0,
+        isMounted: isMountedRef.current
+      })
       toast.error('Грешка: Липсва информация за страна')
       return
     }
     
+    if (!croppedDataUrl || typeof croppedDataUrl !== 'string') {
+      console.error('❌ [UPLOAD] CRITICAL: Invalid croppedDataUrl!')
+      errorLogger.error('UPLOAD_CROP_SAVE', 'CRITICAL: Invalid croppedDataUrl!', undefined, {
+        croppedDataUrl: !!croppedDataUrl,
+        type: typeof croppedDataUrl,
+        editingSide
+      })
+      toast.error('Грешка: Невалидни данни от crop редактора')
+      return
+    }
+    
     if (!isMountedRef.current) {
-      console.warn('⚠️ [UPLOAD] Компонентът е unmounted, прекъсване')
+      console.warn('⚠️ [UPLOAD] Component unmounted, aborting')
       return
     }
     
     setIsProcessing(true)
     
     try {
-      console.log('🔍 [UPLOAD] Валидация на crop данни...')
-      if (!croppedDataUrl || typeof croppedDataUrl !== 'string') {
-        throw new Error('Невалидни данни от crop редактора')
-      }
-
+      console.log('🔍 [UPLOAD] Validating crop data...')
+      
       if (!croppedDataUrl.startsWith('data:image/')) {
-        throw new Error('Невалиден формат на обработеното изображение')
+        throw new Error('Невалиден формат на обработеното изображение (не е data URL)')
       }
       
-      console.log(`📊 [UPLOAD] Размер на cropped изображение преди компресия: ${Math.round(croppedDataUrl.length / 1024)} KB`)
-      console.log('🗜️ [UPLOAD] Започване на агресивна компресия...')
+      console.log(`📊 [UPLOAD] Crop data size before compression: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+      console.log('🗜️ [UPLOAD] Starting aggressive compression...')
       
       let finalImage = await compressImage(croppedDataUrl, 400, 0.55)
-      console.log(`📊 [UPLOAD] Размер след 1st pass: ${Math.round(finalImage.length / 1024)} KB`)
+      console.log(`📊 [UPLOAD] Size after 1st pass: ${Math.round(finalImage.length / 1024)} KB`)
       
       if (finalImage.length > 120 * 1024) {
-        console.warn('⚠️ [UPLOAD] Допълнителна компресия (2nd pass)...')
+        console.warn('⚠️ [UPLOAD] Additional compression needed (2nd pass)...')
         finalImage = await compressImage(finalImage, 350, 0.45)
-        console.log(`📊 [UPLOAD] Размер след 2nd pass: ${Math.round(finalImage.length / 1024)} KB`)
+        console.log(`📊 [UPLOAD] Size after 2nd pass: ${Math.round(finalImage.length / 1024)} KB`)
       }
       
       if (finalImage.length > 150 * 1024) {
-        console.error('❌ [UPLOAD] Изображението е твърде голямо дори след агресивна компресия!')
+        console.error('❌ [UPLOAD] Image too large even after aggressive compression!')
+        errorLogger.error('UPLOAD_CROP_SAVE', 'Image too large after compression', undefined, {
+          finalSize: Math.round(finalImage.length / 1024),
+          editingSide
+        })
         toast.error('Изображението е твърде голямо. Моля, опитайте с по-малка снимка.')
         setIsProcessing(false)
         setEditingSide(null)
@@ -238,47 +258,67 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       }
       
       if (!isMountedRef.current) {
-        console.warn('⚠️ [UPLOAD] Компонентът е unmounted след компресия, прекъсване')
+        console.warn('⚠️ [UPLOAD] Component unmounted after compression, aborting')
         return
       }
       
-      const image: IrisImage = { dataUrl: finalImage, side: editingSide }
+      const image: IrisImage = { 
+        dataUrl: finalImage, 
+        side: editingSide 
+      }
+      
+      console.log('✅ [UPLOAD] IrisImage object created:', {
+        side: image.side,
+        dataUrlLength: image.dataUrl.length,
+        dataUrlType: typeof image.dataUrl,
+        dataUrlStartsWith: image.dataUrl.substring(0, 20)
+      })
+      
       const savedSide = editingSide
       
-      console.log(`💾 [UPLOAD] Запазване на ${savedSide} ирис (финален размер: ${Math.round(finalImage.length / 1024)} KB)...`)
+      console.log(`💾 [UPLOAD] Saving ${savedSide} iris (final size: ${Math.round(finalImage.length / 1024)} KB)...`)
+      console.log('🧹 [UPLOAD] Clearing temp data before saving to state...')
       
-      console.log('🧹 [UPLOAD] Почистване на temp данни преди запазване в state...')
       setTempImageData(null)
       setEditingSide(null)
       
       await new Promise(resolve => setTimeout(resolve, 50))
       
       if (!isMountedRef.current) {
-        console.warn('⚠️ [UPLOAD] Компонентът е unmounted преди запазване, прекъсване')
+        console.warn('⚠️ [UPLOAD] Component unmounted before state save, aborting')
         return
       }
       
+      console.log(`💾 [UPLOAD] Setting ${savedSide} image in state NOW...`)
+      
       if (savedSide === 'left') {
-        console.log('💾 [UPLOAD] Запазване на ляв ирис в state...')
+        console.log('💾 [UPLOAD] Calling setLeftImage()...')
         setLeftImage(image)
+        console.log('✅ [UPLOAD] setLeftImage() called')
       } else {
-        console.log('💾 [UPLOAD] Запазване на десен ирис в state...')
+        console.log('💾 [UPLOAD] Calling setRightImage()...')
         setRightImage(image)
+        console.log('✅ [UPLOAD] setRightImage() called')
       }
       
       await new Promise(resolve => setTimeout(resolve, 100))
       
+      console.log(`💾 [UPLOAD] State update should be complete. Verifying...`)
+      console.log(`📊 [UPLOAD] leftImage exists: ${!!leftImage}`)
+      console.log(`📊 [UPLOAD] rightImage exists: ${!!rightImage}`)
+      
       setIsProcessing(false)
-      console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
+      console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Left' : 'Right'} iris saved successfully`)
       
       toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
     } catch (error) {
-      console.error('❌ [UPLOAD] ГРЕШКА при запазване на изображението:', error)
+      console.error('❌ [UPLOAD] ERROR in handleCropSave:', error)
       errorLogger.error('UPLOAD_CROP_SAVE', 'Error in handleCropSave', error as Error, {
         editingSide,
-        isMounted: isMountedRef.current
+        isMounted: isMountedRef.current,
+        croppedDataUrlLength: croppedDataUrl?.length || 0
       })
-      toast.error('Грешка при запазване на изображението')
+      toast.error(`Грешка при запазване: ${error instanceof Error ? error.message : 'Неизвестна грешка'}`)
       setIsProcessing(false)
       setEditingSide(null)
       setTempImageData(null)
@@ -311,14 +351,35 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
     errorLogger.info('UPLOAD_NEXT', 'handleNext() called', {
       leftImage: !!leftImage,
       rightImage: !!rightImage,
+      leftImageValid: leftImage?.dataUrl ? 'YES' : 'NO',
+      rightImageValid: rightImage?.dataUrl ? 'YES' : 'NO',
       isProcessing,
       editingSide,
       isSaving
     })
     
+    if (isSaving) {
+      errorLogger.warning('UPLOAD_NEXT', 'Already saving, ignoring duplicate call')
+      return
+    }
+    
     if (!leftImage || !rightImage) {
-      errorLogger.warning('UPLOAD_NEXT', 'Missing images')
+      errorLogger.error('UPLOAD_NEXT', 'CRITICAL: Missing images!', undefined, {
+        leftImage: !!leftImage,
+        rightImage: !!rightImage
+      })
       toast.error('Моля, качете и двете снимки')
+      return
+    }
+    
+    if (!leftImage.dataUrl || !rightImage.dataUrl) {
+      errorLogger.error('UPLOAD_NEXT', 'CRITICAL: Image objects exist but dataUrl is missing!', undefined, {
+        leftHasDataUrl: !!leftImage?.dataUrl,
+        rightHasDataUrl: !!rightImage?.dataUrl,
+        leftDataUrlLength: leftImage?.dataUrl?.length || 0,
+        rightDataUrlLength: rightImage?.dataUrl?.length || 0
+      })
+      toast.error('Грешка: Липсват данни за изображенията')
       return
     }
     
@@ -334,34 +395,45 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       return
     }
     
-    if (isSaving) {
-      errorLogger.warning('UPLOAD_NEXT', 'Already saving, ignoring duplicate call')
-      return
-    }
-    
     try {
       errorLogger.info('UPLOAD_NEXT', 'Starting save process')
       setIsSaving(true)
       
-      errorLogger.info('UPLOAD_NEXT', 'Validating images', {
+      errorLogger.info('UPLOAD_NEXT', 'Validating image data', {
         leftSize: Math.round(leftImage.dataUrl.length / 1024),
-        rightSize: Math.round(rightImage.dataUrl.length / 1024)
+        rightSize: Math.round(rightImage.dataUrl.length / 1024),
+        leftType: typeof leftImage.dataUrl,
+        rightType: typeof rightImage.dataUrl,
+        leftStartsWith: leftImage.dataUrl.substring(0, 20),
+        rightStartsWith: rightImage.dataUrl.substring(0, 20)
       })
       
-      if (!leftImage.dataUrl || !rightImage.dataUrl) {
-        throw new Error('Липсват данни за изображенията')
+      if (typeof leftImage.dataUrl !== 'string' || typeof rightImage.dataUrl !== 'string') {
+        throw new Error('Невалиден тип данни на изображенията')
+      }
+      
+      if (leftImage.dataUrl.length < 100 || rightImage.dataUrl.length < 100) {
+        throw new Error('Изображенията са твърде малки или повредени')
       }
       
       if (!leftImage.dataUrl.startsWith('data:image/') || !rightImage.dataUrl.startsWith('data:image/')) {
-        throw new Error('Невалиден формат на изображенията')
+        throw new Error('Невалиден формат на изображенията (не са base64 data URL)')
       }
       
-      errorLogger.info('UPLOAD_NEXT', 'Validation successful, calling onComplete')
+      errorLogger.info('UPLOAD_NEXT', 'Validation successful - all checks passed!')
+      errorLogger.info('UPLOAD_NEXT', 'Calling onComplete() with validated images...')
+      
       onComplete(leftImage, rightImage)
+      
       errorLogger.info('UPLOAD_NEXT', 'onComplete() called successfully')
     } catch (error) {
-      errorLogger.error('UPLOAD_NEXT', 'Error during next transition', error as Error)
-      toast.error('Грешка при преминаване към анализ')
+      errorLogger.error('UPLOAD_NEXT', 'Error during next transition', error as Error, {
+        leftImage: !!leftImage,
+        rightImage: !!rightImage,
+        leftDataUrl: leftImage?.dataUrl ? 'exists' : 'missing',
+        rightDataUrl: rightImage?.dataUrl ? 'exists' : 'missing'
+      })
+      toast.error(`Грешка при преминаване към анализ: ${error instanceof Error ? error.message : 'Неизвестна грешка'}`)
       setIsSaving(false)
     }
   }

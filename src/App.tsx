@@ -78,9 +78,47 @@ function App() {
   }
 
   const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
-    errorLogger.info('APP_IMAGES_COMPLETE', 'handleImagesComplete called', {
+    console.log('🔍 [APP] ========== handleImagesComplete CALLED ==========')
+    console.log('🔍 [APP] left parameter:', left)
+    console.log('🔍 [APP] right parameter:', right)
+    console.log('🔍 [APP] left type:', typeof left)
+    console.log('🔍 [APP] right type:', typeof right)
+    console.log('🔍 [APP] left is null?', left === null)
+    console.log('🔍 [APP] right is null?', right === null)
+    console.log('🔍 [APP] left is undefined?', left === undefined)
+    console.log('🔍 [APP] right is undefined?', right === undefined)
+    
+    if (!left || !right) {
+      errorLogger.error('APP_IMAGES_COMPLETE', 'CRITICAL: left or right parameter is null/undefined!', undefined, {
+        left: !!left,
+        right: !!right,
+        leftType: typeof left,
+        rightType: typeof right
+      })
+      console.error('❌ [APP] CRITICAL ERROR: left or right is null/undefined!')
+      toast.error('Критична грешка: Липсват изображенията')
+      return
+    }
+    
+    if (!left.dataUrl || !right.dataUrl) {
+      errorLogger.error('APP_IMAGES_COMPLETE', 'CRITICAL: dataUrl is missing from images!', undefined, {
+        leftHasDataUrl: !!left?.dataUrl,
+        rightHasDataUrl: !!right?.dataUrl,
+        leftDataUrlType: typeof left?.dataUrl,
+        rightDataUrlType: typeof right?.dataUrl
+      })
+      console.error('❌ [APP] CRITICAL ERROR: dataUrl is missing!')
+      console.error('❌ [APP] left.dataUrl:', left?.dataUrl ? 'exists' : 'MISSING')
+      console.error('❌ [APP] right.dataUrl:', right?.dataUrl ? 'exists' : 'MISSING')
+      toast.error('Критична грешка: Невалидни данни на изображенията')
+      return
+    }
+    
+    errorLogger.info('APP_IMAGES_COMPLETE', 'handleImagesComplete called with VALID images', {
       leftSize: Math.round(left.dataUrl.length / 1024),
       rightSize: Math.round(right.dataUrl.length / 1024),
+      leftSide: left.side,
+      rightSide: right.side,
       currentScreen,
       lockStatus: screenTransitionLockRef.current
     })
