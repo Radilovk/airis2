@@ -6,6 +6,7 @@ import { Camera, Upload, CheckCircle, ArrowRight, X, Crop } from '@phosphor-icon
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import IrisCropEditor from '@/components/iris/IrisCropEditor'
+import { errorLogger } from '@/lib/error-logger'
 import type { IrisImage } from '@/types'
 
 interface ImageUploadScreenProps {
@@ -28,14 +29,16 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   const fileReaderRef = useRef<FileReader | null>(null)
 
   useEffect(() => {
+    errorLogger.info('UPLOAD_MOUNT', 'ImageUploadScreen mounted')
     isMountedRef.current = true
     return () => {
+      errorLogger.info('UPLOAD_UNMOUNT', 'ImageUploadScreen unmounting')
       isMountedRef.current = false
       if (fileReaderRef.current) {
         try {
           fileReaderRef.current.abort()
         } catch (e) {
-          console.warn('FileReader cleanup warning')
+          errorLogger.warning('UPLOAD_CLEANUP', 'FileReader abort warning', e)
         }
       }
     }
@@ -305,40 +308,45 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleNext = async () => {
-    console.log('🎯 [UPLOAD] handleNext() извикан')
-    console.log(`📊 [UPLOAD] leftImage: ${!!leftImage}, rightImage: ${!!rightImage}`)
-    console.log(`📊 [UPLOAD] isProcessing: ${isProcessing}, editingSide: ${editingSide}, isSaving: ${isSaving}`)
+    errorLogger.info('UPLOAD_NEXT', 'handleNext() called', {
+      leftImage: !!leftImage,
+      rightImage: !!rightImage,
+      isProcessing,
+      editingSide,
+      isSaving
+    })
     
     if (!leftImage || !rightImage) {
-      console.warn('⚠️ [UPLOAD] Липсва ляв или десен ирис')
+      errorLogger.warning('UPLOAD_NEXT', 'Missing images')
       toast.error('Моля, качете и двете снимки')
       return
     }
     
     if (isProcessing) {
-      console.warn('⚠️ [UPLOAD] Все още се обработва изображение')
+      errorLogger.warning('UPLOAD_NEXT', 'Still processing image')
       toast.error('Моля, изчакайте обработката да завърши')
       return
     }
     
     if (editingSide !== null) {
-      console.warn('⚠️ [UPLOAD] Все още се редактира изображение')
+      errorLogger.warning('UPLOAD_NEXT', 'Still editing image')
       toast.error('Моля, завършете редакцията на текущото изображение')
       return
     }
     
     if (isSaving) {
-      console.warn('⚠️ [UPLOAD] Запазването вече е започнало, игнориране на дублирано извикване')
+      errorLogger.warning('UPLOAD_NEXT', 'Already saving, ignoring duplicate call')
       return
     }
     
     try {
-      console.log('💾 [UPLOAD] Стартиране на запазване...')
+      errorLogger.info('UPLOAD_NEXT', 'Starting save process')
       setIsSaving(true)
       
-      console.log(`📊 [UPLOAD] Валидация на изображения...`)
-      console.log(`📊 [UPLOAD] Ляв ирис размер: ${Math.round(leftImage.dataUrl.length / 1024)} KB`)
-      console.log(`📊 [UPLOAD] Десен ирис размер: ${Math.round(rightImage.dataUrl.length / 1024)} KB`)
+      errorLogger.info('UPLOAD_NEXT', 'Validating images', {
+        leftSize: Math.round(leftImage.dataUrl.length / 1024),
+        rightSize: Math.round(rightImage.dataUrl.length / 1024)
+      })
       
       if (!leftImage.dataUrl || !rightImage.dataUrl) {
         throw new Error('Липсват данни за изображенията')
@@ -348,15 +356,14 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
         throw new Error('Невалиден формат на изображенията')
       }
       
-      console.log('✅ [UPLOAD] Валидация успешна')
-      console.log('⏳ [UPLOAD] Малка пауза преди извикване на onComplete...')
+      errorLogger.info('UPLOAD_NEXT', 'Validation successful, pausing before onComplete')
       await new Promise(resolve => setTimeout(resolve, 150))
       
-      console.log('🚀 [UPLOAD] Извикване на onComplete(leftImage, rightImage)...')
+      errorLogger.info('UPLOAD_NEXT', 'Calling onComplete callback')
       onComplete(leftImage, rightImage)
-      console.log('✅ [UPLOAD] onComplete() извикан успешно')
+      errorLogger.info('UPLOAD_NEXT', 'onComplete() called successfully')
     } catch (error) {
-      console.error('❌ [UPLOAD] ГРЕШКА при преминаване към анализ:', error)
+      errorLogger.error('UPLOAD_NEXT', 'Error during next transition', error as Error)
       toast.error('Грешка при преминаване към анализ')
       setIsSaving(false)
     }

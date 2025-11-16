@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from '@/components/ui/sonner'
@@ -13,6 +13,7 @@ import AdminScreen from '@/components/screens/AdminScreen'
 import AboutAirisScreen from '@/components/screens/AboutAirisScreen'
 import DiagnosticScreen from '@/components/screens/DiagnosticScreen'
 import QuickDebugPanel from '@/components/QuickDebugPanel'
+import { errorLogger } from '@/lib/error-logger'
 import type { QuestionnaireData, IrisImage, AnalysisReport } from '@/types'
 
 type Screen = 'welcome' | 'questionnaire' | 'upload' | 'analysis' | 'report' | 'history' | 'admin' | 'about' | 'diagnostics'
@@ -25,6 +26,14 @@ function App() {
   const [analysisReport, setAnalysisReport] = useKV<AnalysisReport | null>('analysis-report', null)
   const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
   const screenTransitionLockRef = useRef(false)
+
+  useEffect(() => {
+    errorLogger.info('APP_MOUNT', 'Application mounted successfully')
+    
+    return () => {
+      errorLogger.info('APP_UNMOUNT', 'Application unmounting')
+    }
+  }, [])
 
   const handleStartAnalysis = () => {
     setCurrentScreen('questionnaire')
@@ -58,51 +67,53 @@ function App() {
   }
 
   const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
+    errorLogger.info('APP_IMAGES_COMPLETE', 'handleImagesComplete called', {
+      leftSize: left.dataUrl.length,
+      rightSize: right.dataUrl.length,
+      currentScreen,
+      lockStatus: screenTransitionLockRef.current
+    })
+
     if (screenTransitionLockRef.current) {
-      console.warn('⚠️ [APP] Смяна на екран вече е в ход, игнориране на дублирано извикване')
+      errorLogger.warning('APP_IMAGES_COMPLETE', 'Screen transition already in progress, ignoring duplicate call')
       return
     }
     
     try {
       screenTransitionLockRef.current = true
-      
-      console.log('🖼️ [APP] Получени изображения за анализ')
-      console.log(`📊 [APP] Ляв ирис размер: ${Math.round(left.dataUrl.length / 1024)} KB`)
-      console.log(`📊 [APP] Десен ирис размер: ${Math.round(right.dataUrl.length / 1024)} KB`)
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Lock acquired, starting image processing')
       
       if (!left?.dataUrl || !right?.dataUrl) {
-        console.error('❌ [APP] Невалидни данни на изображенията')
         throw new Error('Невалидни данни на изображенията')
       }
 
       if (!left.dataUrl.startsWith('data:image/') || !right.dataUrl.startsWith('data:image/')) {
-        console.error('❌ [APP] Невалиден формат на изображението')
         throw new Error('Невалиден формат на изображението')
       }
 
-      console.log('✅ [APP] Валидация на изображения успешна')
-      console.log('💾 [APP] Запазване на изображения в ref (БЕЗ re-render, БЕЗ KV storage)...')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Image validation successful')
       
       leftIrisRef.current = left
       rightIrisRef.current = right
       
-      console.log('✅ [APP] Изображения запазени в ref')
-      console.log('⏳ [APP] Малка пауза преди преминаване към анализ...')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Images saved to refs, waiting before screen transition')
       
       await new Promise(resolve => setTimeout(resolve, 200))
       
-      console.log('🚀 [APP] Преминаване към analysis екран...')
-      console.log('📍 [APP] currentScreen ще се смени от "upload" на "analysis"')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Transitioning to analysis screen')
       setCurrentScreen('analysis')
-      console.log('✅ [APP] setCurrentScreen("analysis") извикан успешно')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'setCurrentScreen("analysis") called successfully')
       
       setTimeout(() => {
         screenTransitionLockRef.current = false
-        console.log('🔓 [APP] Смяна на екран завършена, lock освободен')
+        errorLogger.info('APP_IMAGES_COMPLETE', 'Lock released after transition')
       }, 500)
     } catch (error) {
       screenTransitionLockRef.current = false
-      console.error('❌ [APP] ГРЕШКА при обработка на изображенията:', error)
+      errorLogger.error('APP_IMAGES_COMPLETE', 'Error processing images', error as Error, {
+        leftValid: !!left?.dataUrl,
+        rightValid: !!right?.dataUrl
+      })
       toast.error('Грешка при обработка на изображенията. Опитайте отново.')
     }
   }
