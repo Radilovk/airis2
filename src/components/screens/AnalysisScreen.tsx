@@ -432,83 +432,104 @@ ${response}
     let mounted = true
     
     const loadConfigAndStartAnalysis = async () => {
-      if (!mounted) {
-        console.log('⚠️ [ANALYSIS] Component unmounted, aborting')
-        return
-      }
-      
-      if (configLoaded || analysisStarted || analysisRunning) {
-        console.log('⚠️ [ANALYSIS] Анализ вече е стартиран, пропускане...')
-        console.log(`📊 [ANALYSIS] configLoaded: ${configLoaded}, analysisStarted: ${analysisStarted}, analysisRunning: ${analysisRunning}`)
-        return
-      }
-      
-      console.log('🚀 [ANALYSIS] ANALYSIS SCREEN MOUNTED!')
-      console.log('📍 [ANALYSIS] componentDidMount - започва зареждане на конфигурация')
-      
-      await sleep(500)
-      
-      if (!mounted) {
-        console.log('⚠️ [ANALYSIS] Component unmounted during sleep, aborting')
-        return
-      }
-      
-      console.log('⚙️ [ANALYSIS] Зареждане на AI конфигурация от KV storage...')
-      const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
-      const finalConfig = storedConfig || aiConfig
-      
-      if (!finalConfig) {
-        console.warn('⚠️ [CONFIG] Няма конфигурация - използване на default')
-        if (mounted) {
-          setConfigLoaded(true)
-          setAnalysisStarted(true)
-          setAnalysisRunning(true)
-          performAnalysis()
+      try {
+        if (!mounted) {
+          console.log('⚠️ [ANALYSIS] Component unmounted, aborting')
+          return
         }
-        return
+        
+        if (configLoaded || analysisStarted || analysisRunning) {
+          console.log('⚠️ [ANALYSIS] Анализ вече е стартиран, пропускане...')
+          console.log(`📊 [ANALYSIS] configLoaded: ${configLoaded}, analysisStarted: ${analysisStarted}, analysisRunning: ${analysisRunning}`)
+          return
+        }
+        
+        console.log('🚀 [ANALYSIS] ANALYSIS SCREEN MOUNTED!')
+        console.log('📍 [ANALYSIS] componentDidMount - започва зареждане на конфигурация')
+        
+        console.log('🔍 [ANALYSIS] Проверка на изображения преди старт...')
+        if (!leftIris || !rightIris) {
+          throw new Error('Липсват изображения на ириса')
+        }
+        
+        if (!leftIris.dataUrl || !rightIris.dataUrl) {
+          throw new Error('Невалидни данни на изображенията')
+        }
+        
+        console.log('✅ [ANALYSIS] Изображения са валидни')
+        console.log(`📊 [ANALYSIS] Left iris size: ${Math.round(leftIris.dataUrl.length / 1024)} KB`)
+        console.log(`📊 [ANALYSIS] Right iris size: ${Math.round(rightIris.dataUrl.length / 1024)} KB`)
+        
+        await sleep(500)
+        
+        if (!mounted) {
+          console.log('⚠️ [ANALYSIS] Component unmounted during sleep, aborting')
+          return
+        }
+        
+        console.log('⚙️ [ANALYSIS] Зареждане на AI конфигурация от KV storage...')
+        const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
+        const finalConfig = storedConfig || aiConfig
+        
+        if (!finalConfig) {
+          console.warn('⚠️ [CONFIG] Няма конфигурация - използване на default')
+          if (mounted) {
+            setConfigLoaded(true)
+            setAnalysisStarted(true)
+            setAnalysisRunning(true)
+            performAnalysis()
+          }
+          return
+        }
+        
+        const hasAPIKey = finalConfig.apiKey && finalConfig.apiKey.trim() !== ''
+        const isExternalProvider = finalConfig.provider === 'gemini' || finalConfig.provider === 'openai'
+        const hasCustomAPI = hasAPIKey && isExternalProvider
+        const useCustomAPI = hasCustomAPI || (finalConfig.useCustomKey && hasAPIKey && isExternalProvider)
+        
+        let modelToUse: string
+        let providerToUse: string
+        
+        console.log('🔍 [CONFIG DEBUG] finalConfig от KV:', finalConfig)
+        console.log('🔍 [CONFIG DEBUG] hasAPIKey:', hasAPIKey)
+        console.log('🔍 [CONFIG DEBUG] isExternalProvider:', isExternalProvider)
+        console.log('🔍 [CONFIG DEBUG] hasCustomAPI:', hasCustomAPI)
+        console.log('🔍 [CONFIG DEBUG] useCustomAPI (final):', useCustomAPI)
+        
+        if (!useCustomAPI) {
+          providerToUse = 'github-spark'
+          modelToUse = getValidSparkModel(finalConfig.model)
+          console.log(`🔧 [CONFIG] GitHub Spark режим - Конфигуриран модел: "${finalConfig.model}", валиден Spark модел: "${modelToUse}"`)
+        } else {
+          providerToUse = finalConfig.provider
+          modelToUse = finalConfig.model
+          console.log(`🔧 [CONFIG] Собствен API режим - Provider: ${providerToUse}, модел: "${modelToUse}"`)
+        }
+        
+        if (!mounted) {
+          console.log('⚠️ [ANALYSIS] Component unmounted before starting analysis, aborting')
+          return
+        }
+        
+        addLog('info', `✓ AI Конфигурация заредена: ${providerToUse} / ${modelToUse}`)
+        console.log('🔧 [CONFIG] AI конфигурация заредена:', finalConfig)
+        console.log('🎯 [CONFIG] Provider който ще се използва:', providerToUse)
+        console.log('🎯 [CONFIG] Модел който ще се използва:', modelToUse)
+        
+        setLoadedConfig(finalConfig)
+        setConfigLoaded(true)
+        setAnalysisStarted(true)
+        setAnalysisRunning(true)
+        
+        console.log('🎬 [ANALYSIS] Стартиране на performAnalysis()...')
+        performAnalysis()
+      } catch (error) {
+        console.error('❌ [ANALYSIS] КРИТИЧНА ГРЕШКА при mount:', error)
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        setError(`Грешка при стартиране на анализа: ${errorMsg}`)
+        setStatus('Грешка при зареждане')
+        addLog('error', `Фатална грешка при mount: ${errorMsg}`)
       }
-      
-      const hasAPIKey = finalConfig.apiKey && finalConfig.apiKey.trim() !== ''
-      const isExternalProvider = finalConfig.provider === 'gemini' || finalConfig.provider === 'openai'
-      const hasCustomAPI = hasAPIKey && isExternalProvider
-      const useCustomAPI = hasCustomAPI || (finalConfig.useCustomKey && hasAPIKey && isExternalProvider)
-      
-      let modelToUse: string
-      let providerToUse: string
-      
-      console.log('🔍 [CONFIG DEBUG] finalConfig от KV:', finalConfig)
-      console.log('🔍 [CONFIG DEBUG] hasAPIKey:', hasAPIKey)
-      console.log('🔍 [CONFIG DEBUG] isExternalProvider:', isExternalProvider)
-      console.log('🔍 [CONFIG DEBUG] hasCustomAPI:', hasCustomAPI)
-      console.log('🔍 [CONFIG DEBUG] useCustomAPI (final):', useCustomAPI)
-      
-      if (!useCustomAPI) {
-        providerToUse = 'github-spark'
-        modelToUse = getValidSparkModel(finalConfig.model)
-        console.log(`🔧 [CONFIG] GitHub Spark режим - Конфигуриран модел: "${finalConfig.model}", валиден Spark модел: "${modelToUse}"`)
-      } else {
-        providerToUse = finalConfig.provider
-        modelToUse = finalConfig.model
-        console.log(`🔧 [CONFIG] Собствен API режим - Provider: ${providerToUse}, модел: "${modelToUse}"`)
-      }
-      
-      if (!mounted) {
-        console.log('⚠️ [ANALYSIS] Component unmounted before starting analysis, aborting')
-        return
-      }
-      
-      addLog('info', `✓ AI Конфигурация заредена: ${providerToUse} / ${modelToUse}`)
-      console.log('🔧 [CONFIG] AI конфигурация заредена:', finalConfig)
-      console.log('🎯 [CONFIG] Provider който ще се използва:', providerToUse)
-      console.log('🎯 [CONFIG] Модел който ще се използва:', modelToUse)
-      
-      setLoadedConfig(finalConfig)
-      setConfigLoaded(true)
-      setAnalysisStarted(true)
-      setAnalysisRunning(true)
-      
-      console.log('🎬 [ANALYSIS] Стартиране на performAnalysis()...')
-      performAnalysis()
     }
     
     console.log('🔄 [ANALYSIS] useEffect извикан')

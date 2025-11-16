@@ -139,17 +139,31 @@ function App() {
 
       errorLogger.info('APP_IMAGES_COMPLETE', 'Image validation successful')
       
-      errorLogger.info('APP_IMAGES_COMPLETE', 'Saving images to refs (no re-render for large data)...')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Saving images to refs...')
       leftIrisRef.current = left
       rightIrisRef.current = right
       
-      errorLogger.info('APP_IMAGES_COMPLETE', 'Waiting 100ms before screen transition for browser stabilization...')
-      console.log('⏳ [APP] Buffer time - allowing browser to stabilize...')
-      await sleep(100)
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Forcing garbage collection hint...')
+      if (typeof window !== 'undefined' && 'gc' in window && typeof (window as any).gc === 'function') {
+        try {
+          (window as any).gc()
+          console.log('🗑️ [APP] Manual GC triggered')
+        } catch (e) {
+          console.log('ℹ️ [APP] Manual GC not available (expected in production)')
+        }
+      }
       
-      errorLogger.info('APP_IMAGES_COMPLETE', 'Setting imagesReady flag and transitioning to analysis screen')
-      console.log('🚀 [APP] Transitioning to analysis screen...')
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Waiting 200ms for memory stabilization...')
+      console.log('⏳ [APP] Buffer time - allowing browser to stabilize memory...')
+      await sleep(200)
+      
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Setting imagesReady flag')
       setImagesReady(true)
+      
+      await sleep(50)
+      
+      errorLogger.info('APP_IMAGES_COMPLETE', 'Transitioning to analysis screen')
+      console.log('🚀 [APP] Transitioning to analysis screen...')
       setCurrentScreen('analysis')
       errorLogger.info('APP_IMAGES_COMPLETE', 'Screen transition completed')
       console.log('✅ [APP] Screen transition successful')
@@ -157,7 +171,7 @@ function App() {
       setTimeout(() => {
         screenTransitionLockRef.current = false
         errorLogger.info('APP_IMAGES_COMPLETE', 'Lock released')
-      }, 500)
+      }, 1000)
     } catch (error) {
       screenTransitionLockRef.current = false
       errorLogger.error('APP_IMAGES_COMPLETE', 'Error processing images', error as Error, {

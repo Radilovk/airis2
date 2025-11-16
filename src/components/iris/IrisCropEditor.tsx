@@ -299,15 +299,30 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
     
     try {
       console.log('✂️ [CROP] Започване на crop операция...')
+      console.log(`📊 [CROP] Canvas размер: ${canvas.width}x${canvas.height}`)
+      console.log(`📊 [CROP] Image размер: ${img.width}x${img.height}`)
+      console.log(`📊 [CROP] Transform:`, transform)
+      
       const cropCanvas = document.createElement('canvas')
-      const cropSize = 500
+      const cropSize = 380
       cropCanvas.width = cropSize
       cropCanvas.height = cropSize
-      const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: false })
+      
+      console.log(`📊 [CROP] Crop canvas създаден: ${cropSize}x${cropSize}`)
+      
+      const cropCtx = cropCanvas.getContext('2d', { 
+        willReadFrequently: false,
+        alpha: false
+      })
       
       if (!cropCtx) {
         throw new Error('Не може да се създаде context за canvas')
       }
+      
+      console.log('✅ [CROP] Canvas context създаден')
+      
+      cropCtx.fillStyle = '#000000'
+      cropCtx.fillRect(0, 0, cropSize, cropSize)
       
       const centerX = canvas.width / 2
       const centerY = canvas.height / 2
@@ -315,42 +330,68 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
       cropCtx.save()
       
       const scaleFactor = cropSize / canvas.width
+      console.log(`📊 [CROP] Scale factor: ${scaleFactor}`)
       cropCtx.scale(scaleFactor, scaleFactor)
       
       cropCtx.translate(centerX + transform.x, centerY + transform.y)
       cropCtx.rotate((transform.rotation * Math.PI) / 180)
       cropCtx.scale(transform.scale, transform.scale)
       
+      console.log('🖼️ [CROP] Започване рисуване на изображението...')
       cropCtx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height)
       
       cropCtx.restore()
       
       console.log('✅ [CROP] Основното изображение нарисувано')
       
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
       const finalizeCrop = () => {
         try {
-          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.7)
-          console.log(`📊 [CROP] Размер на cropped изображение: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+          console.log('🔄 [CROP] Конвертиране на canvas към dataURL...')
+          const croppedDataUrl = cropCanvas.toDataURL('image/jpeg', 0.6)
+          const sizeKB = Math.round(croppedDataUrl.length / 1024)
+          console.log(`📊 [CROP] Размер на cropped изображение: ${sizeKB} KB`)
           
           if (croppedDataUrl.length > 300 * 1024) {
-            console.warn('⚠️ [CROP] Изображението е твърде голямо след crop')
-            toast.error('Изображението е твърде голямо. Моля, опитайте отново.')
+            console.warn(`⚠️ [CROP] Изображението е твърде голямо след crop (${sizeKB} KB)`)
+            toast.error('Изображението е твърде голямо. Моля, опитайте с по-малък мащаб.')
             return
           }
           
+          if (!croppedDataUrl.startsWith('data:image/')) {
+            throw new Error('Невалиден формат на cropped изображението')
+          }
+          
           console.log('✅ [CROP] Извикване на onSave callback...')
+          cropCanvas.width = 0
+          cropCanvas.height = 0
+          
           onSave(croppedDataUrl)
         } catch (error) {
           console.error('❌ [CROP] Грешка при създаване на dataURL:', error)
-          toast.error('Грешка при запазване на изображението')
+          const errorMsg = error instanceof Error ? error.message : String(error)
+          if (errorMsg.includes('quota') || errorMsg.includes('memory')) {
+            toast.error('Недостатъчно памет. Опитайте с по-малко мащабиране.')
+          } else {
+            toast.error('Грешка при запазване на изображението')
+          }
         }
       }
       
-      console.log('🎨 [CROP] Пропускане на overlay рисуване за по-бърза обработка')
+      console.log('🎨 [CROP] Финализиране на crop операцията...')
       finalizeCrop()
     } catch (error) {
       console.error('❌ [CROP] Фатална грешка при запазване:', error)
-      toast.error('Грешка при обработка на изображението')
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.error('❌ [CROP] Error message:', errorMsg)
+      console.error('❌ [CROP] Error stack:', (error as Error)?.stack)
+      
+      if (errorMsg.includes('quota') || errorMsg.includes('memory') || errorMsg.includes('allocation')) {
+        toast.error('Недостатъчно памет в браузъра. Презаредете страницата и опитайте с по-малка снимка.')
+      } else {
+        toast.error('Грешка при обработка на изображението')
+      }
     }
   }
   

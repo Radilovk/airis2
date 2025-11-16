@@ -204,6 +204,8 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       return
     }
     
+    setIsProcessing(true)
+    
     try {
       console.log('🔍 [UPLOAD] Валидация на crop данни...')
       if (!croppedDataUrl || typeof croppedDataUrl !== 'string') {
@@ -229,9 +231,9 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       if (finalImage.length > 150 * 1024) {
         console.error('❌ [UPLOAD] Изображението е твърде голямо дори след агресивна компресия!')
         toast.error('Изображението е твърде голямо. Моля, опитайте с по-малка снимка.')
+        setIsProcessing(false)
         setEditingSide(null)
         setTempImageData(null)
-        setIsProcessing(false)
         return
       }
       
@@ -244,10 +246,17 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
       const savedSide = editingSide
       
       console.log(`💾 [UPLOAD] Запазване на ${savedSide} ирис (финален размер: ${Math.round(finalImage.length / 1024)} KB)...`)
+      
+      console.log('🧹 [UPLOAD] Почистване на temp данни преди запазване в state...')
       setTempImageData(null)
       setEditingSide(null)
       
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
+      if (!isMountedRef.current) {
+        console.warn('⚠️ [UPLOAD] Компонентът е unmounted преди запазване, прекъсване')
+        return
+      }
       
       if (savedSide === 'left') {
         console.log('💾 [UPLOAD] Запазване на ляв ирис в state...')
@@ -256,6 +265,8 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
         console.log('💾 [UPLOAD] Запазване на десен ирис в state...')
         setRightImage(image)
       }
+      
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       setIsProcessing(false)
       console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
@@ -268,9 +279,9 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
         isMounted: isMountedRef.current
       })
       toast.error('Грешка при запазване на изображението')
+      setIsProcessing(false)
       setEditingSide(null)
       setTempImageData(null)
-      setIsProcessing(false)
     }
   }
 
