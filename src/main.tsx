@@ -12,8 +12,17 @@ import "./index.css"
 
 autoRunStartupChecks()
 
+const handleError = (error: Error, errorInfo: { componentStack: string }) => {
+  console.error('ErrorBoundary caught error:', error)
+  console.error('Component stack:', errorInfo.componentStack)
+  
+  if (error.message.includes('useKV') || error.message.includes('storage') || error.message.includes('quota')) {
+    console.error('⚠️ Storage related error detected! This might be caused by large images.')
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
-  <ErrorBoundary FallbackComponent={ErrorFallback}>
+  <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
     <App />
    </ErrorBoundary>
 )

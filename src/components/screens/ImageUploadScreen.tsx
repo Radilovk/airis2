@@ -10,11 +10,11 @@ import type { IrisImage } from '@/types'
 
 interface ImageUploadScreenProps {
   onComplete: (left: IrisImage, right: IrisImage) => void
-  initialLeft: IrisImage | null
-  initialRight: IrisImage | null
+  initialLeft?: IrisImage | null
+  initialRight?: IrisImage | null
 }
 
-export default function ImageUploadScreen({ onComplete, initialLeft, initialRight }: ImageUploadScreenProps) {
+export default function ImageUploadScreen({ onComplete, initialLeft = null, initialRight = null }: ImageUploadScreenProps) {
   const [leftImage, setLeftImage] = useState<IrisImage | null>(initialLeft)
   const [rightImage, setRightImage] = useState<IrisImage | null>(initialRight)
   const [editingSide, setEditingSide] = useState<'left' | 'right' | null>(null)
@@ -41,7 +41,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
     }
   }, [])
 
-  const compressImage = async (dataUrl: string, maxWidth: number = 1200, quality: number = 0.85): Promise<string> => {
+  const compressImage = async (dataUrl: string, maxWidth: number = 800, quality: number = 0.75): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
@@ -67,6 +67,9 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
           ctx.drawImage(img, 0, 0, width, height)
           
           const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+          
+          console.log(`Компресия: ${Math.round(dataUrl.length / 1024)} KB -> ${Math.round(compressedDataUrl.length / 1024)} KB`)
+          
           resolve(compressedDataUrl)
         } catch (error) {
           reject(error)
@@ -93,6 +96,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
       return
     }
 
+    console.log(`Стартиране на обработка на файл: ${file.name}, размер: ${Math.round(file.size / 1024)} KB`)
     setIsProcessing(true)
 
     if (fileReaderRef.current) {
@@ -108,6 +112,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
 
     reader.onload = async (e) => {
       if (!isMountedRef.current) {
+        console.warn('Компонентът е unmounted, прекъсване')
         return
       }
       
@@ -124,9 +129,24 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
 
         console.log(`Оригинален размер на изображението: ${Math.round(dataUrl.length / 1024)} KB`)
         
-        const compressedDataUrl = await compressImage(dataUrl, 1200, 0.85)
+        const compressedDataUrl = await compressImage(dataUrl, 800, 0.75)
         
         console.log(`Компресиран размер: ${Math.round(compressedDataUrl.length / 1024)} KB`)
+        
+        if (compressedDataUrl.length > 400 * 1024) {
+          console.warn('Изображението е все още голямо, допълнителна компресия...')
+          const extraCompressed = await compressImage(compressedDataUrl, 600, 0.6)
+          console.log(`Допълнително компресиран: ${Math.round(extraCompressed.length / 1024)} KB`)
+          
+          if (!isMountedRef.current) {
+            return
+          }
+
+          setTempImageData(extraCompressed)
+          setEditingSide(side)
+          setIsProcessing(false)
+          return
+        }
         
         if (!isMountedRef.current) {
           return
@@ -165,10 +185,12 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
   const handleCropSave = async (croppedDataUrl: string) => {
     if (!editingSide) {
       console.warn('Липсва информация за страна на ириса')
+      toast.error('Грешка: Липсва информация за страна')
       return
     }
     
     if (!isMountedRef.current) {
+      console.warn('Компонентът е unmounted')
       return
     }
     
@@ -183,9 +205,35 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
       
       console.log(`Размер на cropped изображение преди компресия: ${Math.round(croppedDataUrl.length / 1024)} KB`)
       
-      const compressedDataUrl = await compressImage(croppedDataUrl, 1200, 0.85)
+      const compressedDataUrl = await compressImage(croppedDataUrl, 800, 0.75)
       
       console.log(`Размер на cropped изображение след компресия: ${Math.round(compressedDataUrl.length / 1024)} KB`)
+      
+      if (compressedDataUrl.length > 500 * 1024) {
+        console.warn('Изображението е все още твърде голямо, допълнителна компресия...')
+        const extraCompressed = await compressImage(compressedDataUrl, 600, 0.6)
+        console.log(`След допълнителна компресия: ${Math.round(extraCompressed.length / 1024)} KB`)
+        
+        if (!isMountedRef.current) return
+        
+        const image: IrisImage = { dataUrl: extraCompressed, side: editingSide }
+        const savedSide = editingSide
+        
+        setTempImageData(null)
+        setEditingSide(null)
+        
+        await new Promise(resolve => setTimeout(resolve, 50))
+        
+        if (savedSide === 'left') {
+          setLeftImage(image)
+        } else {
+          setRightImage(image)
+        }
+        
+        setIsProcessing(false)
+        toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
+        return
+      }
       
       if (!isMountedRef.current) {
         return
@@ -195,6 +243,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
       const savedSide = editingSide
       
       setTempImageData(null)
+      setEditingSide(null)
       
       await new Promise(resolve => setTimeout(resolve, 50))
       
@@ -204,7 +253,6 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
         setRightImage(image)
       }
       
-      setEditingSide(null)
       setIsProcessing(false)
       
       toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)

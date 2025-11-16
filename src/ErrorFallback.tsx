@@ -3,7 +3,7 @@ import { Button } from "./components/ui/button";
 import { Warning, ArrowClockwise } from "@phosphor-icons/react";
 
 export const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) => {
-  if (import.meta.env.DEV) throw error;
+  console.error('ErrorFallback показан за:', error)
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -12,7 +12,7 @@ export const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error, res
           <Warning size={20} weight="duotone" />
           <AlertTitle>Възникна грешка при изпълнение</AlertTitle>
           <AlertDescription>
-            Нещо неочаквано се случи по време на изпълнение на приложението. Детайлите за грешката са показани по-долу. Моля, свържете се с автора на приложението и го уведомете за този проблем.
+            Нещо неочаквано се случи по време на изпълнение на приложението. Детайлите за грешката са показани по-долу.
           </AlertDescription>
         </Alert>
         
@@ -21,16 +21,35 @@ export const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error, res
           <pre className="text-xs text-destructive bg-muted/50 p-3 rounded border overflow-auto max-h-32">
             {error.message}
           </pre>
+          {error.stack && (
+            <details className="mt-3">
+              <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                Stack trace
+              </summary>
+              <pre className="text-xs text-muted-foreground bg-muted/50 p-3 rounded border overflow-auto max-h-40 mt-2">
+                {error.stack}
+              </pre>
+            </details>
+          )}
         </div>
         
-        <Button 
-          onClick={resetErrorBoundary} 
-          className="w-full gap-2"
-          variant="outline"
-        >
-          <ArrowClockwise size={18} />
-          Опитай Отново
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={resetErrorBoundary} 
+            className="flex-1 gap-2"
+            variant="outline"
+          >
+            <ArrowClockwise size={18} />
+            Опитай Отново
+          </Button>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="flex-1"
+            variant="default"
+          >
+            Презареди
+          </Button>
+        </div>
       </div>
     </div>
   );

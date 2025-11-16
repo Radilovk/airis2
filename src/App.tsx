@@ -20,8 +20,8 @@ type Screen = 'welcome' | 'questionnaire' | 'upload' | 'analysis' | 'report' | '
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('welcome')
   const [questionnaireData, setQuestionnaireData] = useKV<QuestionnaireData | null>('questionnaire-data', null)
-  const [leftIris, setLeftIris] = useKV<IrisImage | null>('temp-left-iris', null)
-  const [rightIris, setRightIris] = useKV<IrisImage | null>('temp-right-iris', null)
+  const [leftIris, setLeftIris] = useState<IrisImage | null>(null)
+  const [rightIris, setRightIris] = useState<IrisImage | null>(null)
   const [analysisReport, setAnalysisReport] = useKV<AnalysisReport | null>('analysis-report', null)
   const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
 
@@ -58,42 +58,59 @@ function App() {
 
   const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
     try {
-      console.log('Запазване на изображения в storage...')
+      console.log('Получени изображения за анализ')
       console.log(`Ляв ирис размер: ${Math.round(left.dataUrl.length / 1024)} KB`)
       console.log(`Десен ирис размер: ${Math.round(right.dataUrl.length / 1024)} KB`)
       
-      if (!left.dataUrl || !right.dataUrl) {
+      if (!left?.dataUrl || !right?.dataUrl) {
         throw new Error('Невалидни данни на изображенията')
       }
+
+      if (!left.dataUrl.startsWith('data:image/') || !right.dataUrl.startsWith('data:image/')) {
+        throw new Error('Невалиден формат на изображението')
+      }
+
+      console.log('Запазване на изображения в паметта...')
       
-      setLeftIris(() => left)
-      setRightIris(() => right)
+      setLeftIris(left)
+      setRightIris(right)
       
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 100))
       
-      console.log('Изображенията са запазени успешно')
+      console.log('Преминаване към анализ...')
       setCurrentScreen('analysis')
     } catch (error) {
-      console.error('Грешка при запазване на изображенията:', error)
-      toast.error('Грешка при запазване на изображенията')
+      console.error('Грешка при обработка на изображенията:', error)
+      toast.error('Грешка при обработка на изображенията. Опитайте отново.')
     }
   }
 
   const handleAnalysisComplete = (report: AnalysisReport) => {
-    setAnalysisReport(() => report)
-    setHistory((current) => [report, ...(current || [])])
-    setTimeout(() => setCurrentScreen('report'), 50)
+    try {
+      console.log('Запазване на репорт в история...')
+      setAnalysisReport(() => report)
+      setHistory((current) => [report, ...(current || [])])
+      setTimeout(() => setCurrentScreen('report'), 50)
+    } catch (error) {
+      console.error('Грешка при запазване на репорт:', error)
+      toast.error('Грешка при запазване на репорт')
+    }
   }
 
   const handleViewReport = (report: AnalysisReport) => {
-    setAnalysisReport(() => report)
-    setTimeout(() => setCurrentScreen('report'), 50)
+    try {
+      setAnalysisReport(() => report)
+      setTimeout(() => setCurrentScreen('report'), 50)
+    } catch (error) {
+      console.error('Грешка при показване на репорт:', error)
+      toast.error('Грешка при показване на репорт')
+    }
   }
 
   const handleRestart = () => {
     setQuestionnaireData(() => null)
-    setLeftIris(() => null)
-    setRightIris(() => null)
+    setLeftIris(null)
+    setRightIris(null)
     setAnalysisReport(() => null)
     setTimeout(() => setCurrentScreen('welcome'), 50)
   }
@@ -135,8 +152,6 @@ function App() {
           >
             <ImageUploadScreen 
               onComplete={handleImagesComplete}
-              initialLeft={leftIris || null}
-              initialRight={rightIris || null}
             />
           </motion.div>
         )}

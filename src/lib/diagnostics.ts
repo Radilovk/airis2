@@ -20,6 +20,7 @@ export async function runDiagnostics(): Promise<DiagnosticResult> {
   checks.push(checkLocalStorage())
   checks.push(checkBrowserAPIs())
   checks.push(checkDependencies())
+  checks.push(await checkStorageSize())
 
   const failCount = checks.filter(c => c.status === 'fail').length
   const warningCount = checks.filter(c => c.status === 'warning').length
@@ -215,6 +216,66 @@ function checkDependencies(): DiagnosticCheck {
       name: 'Dependencies',
       status: 'warning',
       message: 'Не може да се провери състоянието на зависимостите',
+      details: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+
+async function checkStorageSize(): Promise<DiagnosticCheck> {
+  try {
+    if (!window.spark?.kv) {
+      return {
+        name: 'Storage Size',
+        status: 'warning',
+        message: 'KV Storage не е наличен',
+      }
+    }
+
+    const keys = await window.spark.kv.keys()
+    let totalSize = 0
+    const keySizes: Record<string, number> = {}
+
+    for (const key of keys) {
+      try {
+        const value = await window.spark.kv.get(key)
+        const serialized = JSON.stringify(value)
+        const size = new Blob([serialized]).size
+        totalSize += size
+        keySizes[key] = size
+      } catch (e) {
+        console.warn(`Не може да се изчисли размер на ключ: ${key}`)
+      }
+    }
+
+    const totalSizeKB = Math.round(totalSize / 1024)
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2)
+
+    let largestKeys = Object.entries(keySizes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([key, size]) => `${key}: ${Math.round(size / 1024)}KB`)
+      .join(', ')
+
+    if (totalSize > 5 * 1024 * 1024) {
+      return {
+        name: 'Storage Size',
+        status: 'warning',
+        message: `Storage е голям: ${totalSizeMB}MB`,
+        details: `Най-големи: ${largestKeys || 'N/A'}`
+      }
+    }
+
+    return {
+      name: 'Storage Size',
+      status: 'pass',
+      message: `Storage: ${totalSizeKB}KB (${keys.length} ключа)`,
+      details: largestKeys ? `Най-големи: ${largestKeys}` : undefined
+    }
+  } catch (error) {
+    return {
+      name: 'Storage Size',
+      status: 'warning',
+      message: 'Не може да се провери размер на storage',
       details: error instanceof Error ? error.message : String(error)
     }
   }
