@@ -183,18 +183,22 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleCropSave = async (croppedDataUrl: string) => {
+    console.log('✂️ [UPLOAD] handleCropSave() извикан')
+    console.log(`📊 [UPLOAD] editingSide: ${editingSide}`)
+    
     if (!editingSide) {
-      console.warn('Липсва информация за страна на ириса')
+      console.warn('⚠️ [UPLOAD] Липсва информация за страна на ириса')
       toast.error('Грешка: Липсва информация за страна')
       return
     }
     
     if (!isMountedRef.current) {
-      console.warn('Компонентът е unmounted')
+      console.warn('⚠️ [UPLOAD] Компонентът е unmounted, прекъсване')
       return
     }
     
     try {
+      console.log('🔍 [UPLOAD] Валидация на crop данни...')
       if (!croppedDataUrl || typeof croppedDataUrl !== 'string') {
         throw new Error('Невалидни данни от crop редактора')
       }
@@ -203,61 +207,74 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
         throw new Error('Невалиден формат на обработеното изображение')
       }
       
-      console.log(`Размер на cropped изображение преди компресия: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+      console.log(`📊 [UPLOAD] Размер на cropped изображение преди компресия: ${Math.round(croppedDataUrl.length / 1024)} KB`)
+      console.log('🗜️ [UPLOAD] Започване на компресия...')
       
       const compressedDataUrl = await compressImage(croppedDataUrl, 600, 0.65)
       
-      console.log(`Размер на cropped изображение след компресия: ${Math.round(compressedDataUrl.length / 1024)} KB`)
+      console.log(`📊 [UPLOAD] Размер на cropped изображение след компресия: ${Math.round(compressedDataUrl.length / 1024)} KB`)
       
       if (compressedDataUrl.length > 250 * 1024) {
-        console.warn('Изображението е все още твърде голямо, допълнителна компресия...')
+        console.warn('⚠️ [UPLOAD] Изображението е все още твърде голямо, допълнителна компресия...')
         const extraCompressed = await compressImage(compressedDataUrl, 500, 0.55)
-        console.log(`След допълнителна компресия: ${Math.round(extraCompressed.length / 1024)} KB`)
+        console.log(`📊 [UPLOAD] След допълнителна компресия: ${Math.round(extraCompressed.length / 1024)} KB`)
         
-        if (!isMountedRef.current) return
+        if (!isMountedRef.current) {
+          console.warn('⚠️ [UPLOAD] Компонентът е unmounted след компресия, прекъсване')
+          return
+        }
         
         const image: IrisImage = { dataUrl: extraCompressed, side: editingSide }
         const savedSide = editingSide
         
+        console.log(`💾 [UPLOAD] Запазване на ${savedSide} ирис...`)
         setTempImageData(null)
         setEditingSide(null)
         
-        await new Promise(resolve => setTimeout(resolve, 50))
+        await new Promise(resolve => setTimeout(resolve, 100))
         
         if (savedSide === 'left') {
+          console.log('💾 [UPLOAD] Запазване на ляв ирис в state...')
           setLeftImage(image)
         } else {
+          console.log('💾 [UPLOAD] Запазване на десен ирис в state...')
           setRightImage(image)
         }
         
         setIsProcessing(false)
+        console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
         toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
         return
       }
       
       if (!isMountedRef.current) {
+        console.warn('⚠️ [UPLOAD] Компонентът е unmounted след компресия, прекъсване')
         return
       }
       
       const image: IrisImage = { dataUrl: compressedDataUrl, side: editingSide }
       const savedSide = editingSide
       
+      console.log(`💾 [UPLOAD] Запазване на ${savedSide} ирис...`)
       setTempImageData(null)
       setEditingSide(null)
       
-      await new Promise(resolve => setTimeout(resolve, 50))
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       if (savedSide === 'left') {
+        console.log('💾 [UPLOAD] Запазване на ляв ирис в state...')
         setLeftImage(image)
       } else {
+        console.log('💾 [UPLOAD] Запазване на десен ирис в state...')
         setRightImage(image)
       }
       
       setIsProcessing(false)
+      console.log(`✅ [UPLOAD] ${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
       
       toast.success(`${savedSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
     } catch (error) {
-      console.error('Грешка при запазване на изображението:', error)
+      console.error('❌ [UPLOAD] ГРЕШКА при запазване на изображението:', error)
       toast.error('Грешка при запазване на изображението')
       setEditingSide(null)
       setTempImageData(null)
@@ -288,33 +305,58 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }
 
   const handleNext = async () => {
+    console.log('🎯 [UPLOAD] handleNext() извикан')
+    console.log(`📊 [UPLOAD] leftImage: ${!!leftImage}, rightImage: ${!!rightImage}`)
+    console.log(`📊 [UPLOAD] isProcessing: ${isProcessing}, editingSide: ${editingSide}, isSaving: ${isSaving}`)
+    
     if (!leftImage || !rightImage) {
+      console.warn('⚠️ [UPLOAD] Липсва ляв или десен ирис')
       toast.error('Моля, качете и двете снимки')
       return
     }
     
     if (isProcessing) {
+      console.warn('⚠️ [UPLOAD] Все още се обработва изображение')
       toast.error('Моля, изчакайте обработката да завърши')
       return
     }
     
     if (editingSide !== null) {
+      console.warn('⚠️ [UPLOAD] Все още се редактира изображение')
       toast.error('Моля, завършете редакцията на текущото изображение')
       return
     }
     
     if (isSaving) {
-      console.log('Запазването вече е започнало')
+      console.warn('⚠️ [UPLOAD] Запазването вече е започнало, игнориране на дублирано извикване')
       return
     }
     
     try {
+      console.log('💾 [UPLOAD] Стартиране на запазване...')
       setIsSaving(true)
-      console.log('Преминаване към анализ с изображения...')
-      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      console.log(`📊 [UPLOAD] Валидация на изображения...`)
+      console.log(`📊 [UPLOAD] Ляв ирис размер: ${Math.round(leftImage.dataUrl.length / 1024)} KB`)
+      console.log(`📊 [UPLOAD] Десен ирис размер: ${Math.round(rightImage.dataUrl.length / 1024)} KB`)
+      
+      if (!leftImage.dataUrl || !rightImage.dataUrl) {
+        throw new Error('Липсват данни за изображенията')
+      }
+      
+      if (!leftImage.dataUrl.startsWith('data:image/') || !rightImage.dataUrl.startsWith('data:image/')) {
+        throw new Error('Невалиден формат на изображенията')
+      }
+      
+      console.log('✅ [UPLOAD] Валидация успешна')
+      console.log('⏳ [UPLOAD] Малка пауза преди извикване на onComplete...')
+      await new Promise(resolve => setTimeout(resolve, 150))
+      
+      console.log('🚀 [UPLOAD] Извикване на onComplete(leftImage, rightImage)...')
       onComplete(leftImage, rightImage)
+      console.log('✅ [UPLOAD] onComplete() извикан успешно')
     } catch (error) {
-      console.error('Грешка при преминаване към анализ:', error)
+      console.error('❌ [UPLOAD] ГРЕШКА при преминаване към анализ:', error)
       toast.error('Грешка при преминаване към анализ')
       setIsSaving(false)
     }

@@ -36,6 +36,7 @@ export default function AnalysisScreen({
   const [analysisStarted, setAnalysisStarted] = useState(false)
   const [configLoaded, setConfigLoaded] = useState(false)
   const [loadedConfig, setLoadedConfig] = useState<AIModelConfig | null>(null)
+  const [analysisRunning, setAnalysisRunning] = useState(false)
   
   const [aiConfig] = useKV<AIModelConfig>('ai-model-config', {
     provider: 'github-spark',
@@ -429,10 +430,18 @@ ${response}
 
   useEffect(() => {
     const loadConfigAndStartAnalysis = async () => {
-      if (configLoaded || analysisStarted) return
+      if (configLoaded || analysisStarted || analysisRunning) {
+        console.log('⚠️ [ANALYSIS] Анализ вече е стартиран, пропускане...')
+        console.log(`📊 [ANALYSIS] configLoaded: ${configLoaded}, analysisStarted: ${analysisStarted}, analysisRunning: ${analysisRunning}`)
+        return
+      }
+      
+      console.log('🚀 [ANALYSIS] ANALYSIS SCREEN MOUNTED!')
+      console.log('📍 [ANALYSIS] componentDidMount - започва зареждане на конфигурация')
       
       await sleep(500)
       
+      console.log('⚙️ [ANALYSIS] Зареждане на AI конфигурация от KV storage...')
       const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
       const finalConfig = storedConfig || aiConfig
       
@@ -440,6 +449,7 @@ ${response}
         console.warn('⚠️ [CONFIG] Няма конфигурация - използване на default')
         setConfigLoaded(true)
         setAnalysisStarted(true)
+        setAnalysisRunning(true)
         performAnalysis()
         return
       }
@@ -476,13 +486,27 @@ ${response}
       setLoadedConfig(finalConfig)
       setConfigLoaded(true)
       setAnalysisStarted(true)
+      setAnalysisRunning(true)
+      
+      console.log('🎬 [ANALYSIS] Стартиране на performAnalysis()...')
       performAnalysis()
     }
     
+    console.log('🔄 [ANALYSIS] useEffect извикан')
     loadConfigAndStartAnalysis()
   }, [])
 
   const performAnalysis = async () => {
+    if (analysisRunning) {
+      console.warn('⚠️ [АНАЛИЗ] performAnalysis вече работи, пропускане на дублирано извикване!')
+      return
+    }
+    
+    console.log('🎬 [АНАЛИЗ] performAnalysis() STARTED')
+    console.log('📊 [АНАЛИЗ] leftIris валиден:', !!leftIris)
+    console.log('📊 [АНАЛИЗ] rightIris валиден:', !!rightIris)
+    console.log('📊 [АНАЛИЗ] questionnaireData валиден:', !!questionnaireData)
+    
     try {
       const storedConfig = await window.spark.kv.get<AIModelConfig>('ai-model-config')
       const finalConfig = storedConfig || aiConfig || {
@@ -677,11 +701,17 @@ ${response}
       }
       
       console.log('🎉 [АНАЛИЗ] Доклад завършен успешно!')
+      console.log('✅ [АНАЛИЗ] performAnalysis() ЗАВЪРШЕН УСПЕШНО')
+      setAnalysisRunning(false)
       
       setTimeout(() => {
+        console.log('🚀 [АНАЛИЗ] Извикване на onComplete() callback...')
         onComplete(report)
       }, 1000)
     } catch (error) {
+      console.error('❌ [АНАЛИЗ] КРИТИЧНА ГРЕШКА в performAnalysis()!')
+      setAnalysisRunning(false)
+      
       const errorMessage = error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : 'Няма stack trace'
       

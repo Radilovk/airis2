@@ -24,6 +24,7 @@ function App() {
   const rightIrisRef = useRef<IrisImage | null>(null)
   const [analysisReport, setAnalysisReport] = useKV<AnalysisReport | null>('analysis-report', null)
   const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
+  const screenTransitionLockRef = useRef(false)
 
   const handleStartAnalysis = () => {
     setCurrentScreen('questionnaire')
@@ -57,42 +58,83 @@ function App() {
   }
 
   const handleImagesComplete = async (left: IrisImage, right: IrisImage) => {
+    if (screenTransitionLockRef.current) {
+      console.warn('⚠️ [APP] Смяна на екран вече е в ход, игнориране на дублирано извикване')
+      return
+    }
+    
     try {
-      console.log('Получени изображения за анализ')
-      console.log(`Ляв ирис размер: ${Math.round(left.dataUrl.length / 1024)} KB`)
-      console.log(`Десен ирис размер: ${Math.round(right.dataUrl.length / 1024)} KB`)
+      screenTransitionLockRef.current = true
+      
+      console.log('🖼️ [APP] Получени изображения за анализ')
+      console.log(`📊 [APP] Ляв ирис размер: ${Math.round(left.dataUrl.length / 1024)} KB`)
+      console.log(`📊 [APP] Десен ирис размер: ${Math.round(right.dataUrl.length / 1024)} KB`)
       
       if (!left?.dataUrl || !right?.dataUrl) {
+        console.error('❌ [APP] Невалидни данни на изображенията')
         throw new Error('Невалидни данни на изображенията')
       }
 
       if (!left.dataUrl.startsWith('data:image/') || !right.dataUrl.startsWith('data:image/')) {
+        console.error('❌ [APP] Невалиден формат на изображението')
         throw new Error('Невалиден формат на изображението')
       }
 
-      console.log('Запазване на изображения в ref (без re-render)...')
+      console.log('✅ [APP] Валидация на изображения успешна')
+      console.log('💾 [APP] Запазване на изображения в ref (БЕЗ re-render, БЕЗ KV storage)...')
       
       leftIrisRef.current = left
       rightIrisRef.current = right
       
-      await new Promise(resolve => setTimeout(resolve, 50))
+      console.log('✅ [APP] Изображения запазени в ref')
+      console.log('⏳ [APP] Малка пауза преди преминаване към анализ...')
       
-      console.log('Преминаване към анализ...')
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      console.log('🚀 [APP] Преминаване към analysis екран...')
+      console.log('📍 [APP] currentScreen ще се смени от "upload" на "analysis"')
       setCurrentScreen('analysis')
+      console.log('✅ [APP] setCurrentScreen("analysis") извикан успешно')
+      
+      setTimeout(() => {
+        screenTransitionLockRef.current = false
+        console.log('🔓 [APP] Смяна на екран завършена, lock освободен')
+      }, 500)
     } catch (error) {
-      console.error('Грешка при обработка на изображенията:', error)
+      screenTransitionLockRef.current = false
+      console.error('❌ [APP] ГРЕШКА при обработка на изображенията:', error)
       toast.error('Грешка при обработка на изображенията. Опитайте отново.')
     }
   }
 
   const handleAnalysisComplete = (report: AnalysisReport) => {
     try {
-      console.log('Запазване на репорт в история...')
+      console.log('📝 [APP] Запазване на репорт...')
+      console.log(`📊 [APP] Размер на репорт: ${JSON.stringify(report).length} символа`)
+      console.log(`📊 [APP] Размер на ляво изображение: ${report.leftIrisImage.dataUrl.length} символа`)
+      console.log(`📊 [APP] Размер на дясно изображение: ${report.rightIrisImage.dataUrl.length} символа`)
+      
+      console.log('💾 [APP] Записване на ПЪЛЕН репорт в currentReport (с изображения)...')
       setAnalysisReport(() => report)
-      setHistory((current) => [report, ...(current || [])])
-      setTimeout(() => setCurrentScreen('report'), 50)
+      
+      console.log('📋 [APP] Създаване на "лека" версия на репорт за история (БЕЗ изображения)...')
+      const lightReport: AnalysisReport = {
+        ...report,
+        leftIrisImage: { dataUrl: '', side: 'left' },
+        rightIrisImage: { dataUrl: '', side: 'right' }
+      }
+      
+      console.log(`📊 [APP] Размер на "лек" репорт: ${JSON.stringify(lightReport).length} символа`)
+      console.log('💾 [APP] Записване на "лек" репорт в история...')
+      setHistory((current) => [lightReport, ...(current || [])])
+      
+      console.log('⏳ [APP] Малка пауза преди преминаване към report екран...')
+      setTimeout(() => {
+        console.log('🚀 [APP] Преминаване към report екран...')
+        setCurrentScreen('report')
+      }, 100)
     } catch (error) {
-      console.error('Грешка при запазване на репорт:', error)
+      console.error('❌ [APP] ГРЕШКА при запазване на репорт:', error)
       toast.error('Грешка при запазване на репорт')
     }
   }
