@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -19,9 +19,19 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
   const [rightImage, setRightImage] = useState<IrisImage | null>(initialRight)
   const [editingSide, setEditingSide] = useState<'left' | 'right' | null>(null)
   const [tempImageData, setTempImageData] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
   
   const leftInputRef = useRef<HTMLInputElement>(null)
   const rightInputRef = useRef<HTMLInputElement>(null)
+  const fileReaderRef = useRef<FileReader | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (fileReaderRef.current) {
+        fileReaderRef.current.abort()
+      }
+    }
+  }, [])
 
   const handleFileSelect = (side: 'left' | 'right', file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -29,34 +39,87 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
       return
     }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string
-      setTempImageData(dataUrl)
-      setEditingSide(side)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Файлът е твърде голям. Максимум 10MB.')
+      return
     }
-    reader.readAsDataURL(file)
+
+    setIsProcessing(true)
+
+    if (fileReaderRef.current) {
+      fileReaderRef.current.abort()
+    }
+
+    const reader = new FileReader()
+    fileReaderRef.current = reader
+
+    reader.onload = (e) => {
+      try {
+        const dataUrl = e.target?.result as string
+        if (dataUrl && typeof dataUrl === 'string') {
+          setTempImageData(dataUrl)
+          setEditingSide(side)
+        } else {
+          throw new Error('Невалидни данни от изображението')
+        }
+      } catch (error) {
+        console.error('Грешка при обработка на изображението:', error)
+        toast.error('Грешка при обработка на изображението')
+      } finally {
+        setIsProcessing(false)
+      }
+    }
+
+    reader.onerror = (error) => {
+      console.error('Грешка при четене на файла:', error)
+      toast.error('Грешка при четене на файла')
+      setIsProcessing(false)
+    }
+
+    reader.onabort = () => {
+      setIsProcessing(false)
+    }
+
+    try {
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Грешка при стартиране на четене:', error)
+      toast.error('Грешка при зареждане на изображението')
+      setIsProcessing(false)
+    }
   }
 
   const handleCropSave = (croppedDataUrl: string) => {
     if (!editingSide) return
     
-    const image: IrisImage = { dataUrl: croppedDataUrl, side: editingSide }
-    
-    if (editingSide === 'left') {
-      setLeftImage(image)
-    } else {
-      setRightImage(image)
+    try {
+      if (!croppedDataUrl || typeof croppedDataUrl !== 'string') {
+        throw new Error('Невалидни данни от crop редактора')
+      }
+      
+      const image: IrisImage = { dataUrl: croppedDataUrl, side: editingSide }
+      
+      if (editingSide === 'left') {
+        setLeftImage(image)
+      } else {
+        setRightImage(image)
+      }
+      
+      setEditingSide(null)
+      setTempImageData(null)
+      toast.success(`${editingSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
+    } catch (error) {
+      console.error('Грешка при запазване на изображението:', error)
+      toast.error('Грешка при запазване на изображението')
+      setEditingSide(null)
+      setTempImageData(null)
     }
-    
-    setEditingSide(null)
-    setTempImageData(null)
-    toast.success(`${editingSide === 'left' ? 'Ляв' : 'Десен'} ирис запазен успешно`)
   }
 
   const handleCropCancel = () => {
     setEditingSide(null)
     setTempImageData(null)
+    setIsProcessing(false)
   }
 
   const handleEditImage = (side: 'left' | 'right') => {
@@ -119,6 +182,15 @@ export default function ImageUploadScreen({ onComplete, initialLeft, initialRigh
               <li>• След качване, позиционирайте ириса в редактора</li>
             </ul>
           </Card>
+
+          {isProcessing && (
+            <Card className="p-4 mb-6 bg-primary/10">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+                <p className="text-sm font-medium">Обработка на изображението...</p>
+              </div>
+            </Card>
+          )}
 
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <motion.div

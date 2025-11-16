@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsClockwise, Check, X } from '@phosphor-icons/react'
 import IridologyOverlay from './IridologyOverlay'
 import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import type { CustomOverlay } from '@/types'
 
 interface IrisCropEditorProps {
@@ -38,6 +39,8 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null)
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 400 })
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
   
   // Responsive canvas size
   useEffect(() => {
@@ -55,15 +58,42 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
   
   // Load and initialize image
   useEffect(() => {
+    setImageLoaded(false)
+    setImageError(false)
+    
     const img = new Image()
+    
     img.onload = () => {
       imageRef.current = img
+      setImageLoaded(true)
     }
-    img.src = imageDataUrl
+    
+    img.onerror = (error) => {
+      console.error('Грешка при зареждане на изображението:', error)
+      setImageError(true)
+      setImageLoaded(false)
+    }
+    
+    try {
+      img.src = imageDataUrl
+    } catch (error) {
+      console.error('Грешка при задаване на изображението:', error)
+      setImageError(true)
+    }
+    
+    return () => {
+      img.onload = null
+      img.onerror = null
+      if (imageRef.current === img) {
+        imageRef.current = null
+      }
+    }
   }, [imageDataUrl])
   
   // Draw canvas with current transform
   useEffect(() => {
+    if (!imageLoaded) return
+    
     const canvas = canvasRef.current
     const img = imageRef.current
     if (!canvas || !img) return
@@ -71,29 +101,33 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     
-    const { width, height } = canvas
-    const centerX = width / 2
-    const centerY = height / 2
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height)
-    
-    // Save context state
-    ctx.save()
-    
-    // Apply transformations
-    ctx.translate(centerX + transform.x, centerY + transform.y)
-    ctx.rotate((transform.rotation * Math.PI) / 180)
-    ctx.scale(transform.scale, transform.scale)
-    
-    // Draw image centered
-    const imgWidth = img.width
-    const imgHeight = img.height
-    ctx.drawImage(img, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight)
-    
-    // Restore context
-    ctx.restore()
-  }, [transform, canvasSize])
+    try {
+      const { width, height } = canvas
+      const centerX = width / 2
+      const centerY = height / 2
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height)
+      
+      // Save context state
+      ctx.save()
+      
+      // Apply transformations
+      ctx.translate(centerX + transform.x, centerY + transform.y)
+      ctx.rotate((transform.rotation * Math.PI) / 180)
+      ctx.scale(transform.scale, transform.scale)
+      
+      // Draw image centered
+      const imgWidth = img.width
+      const imgHeight = img.height
+      ctx.drawImage(img, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight)
+      
+      // Restore context
+      ctx.restore()
+    } catch (error) {
+      console.error('Грешка при рисуване на канваса:', error)
+    }
+  }, [transform, canvasSize, imageLoaded])
   
   // Touch and mouse handlers
   const getTouchDistance = (touches: React.TouchList) => {
@@ -222,117 +256,169 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
   
   const handleSave = async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const cropCanvas = document.createElement('canvas')
-    const cropSize = 800
-    cropCanvas.width = cropSize
-    cropCanvas.height = cropSize
-    const cropCtx = cropCanvas.getContext('2d')
-    if (!cropCtx) return
-    
-    const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
-    
-    cropCtx.save()
-    
-    const scaleFactor = cropSize / canvas.width
-    cropCtx.scale(scaleFactor, scaleFactor)
-    
-    cropCtx.translate(centerX + transform.x, centerY + transform.y)
-    cropCtx.rotate((transform.rotation * Math.PI) / 180)
-    cropCtx.scale(transform.scale, transform.scale)
-    
     const img = imageRef.current
-    if (img) {
-      cropCtx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height)
+    
+    if (!canvas || !img || !imageLoaded) {
+      console.error('Canvas или изображение не са готови')
+      return
     }
     
-    cropCtx.restore()
-    
-    if (customOverlay) {
-      const overlayImg = new Image()
-      overlayImg.onload = () => {
-        cropCtx.globalAlpha = 0.6
-        cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
-        cropCtx.globalAlpha = 1.0
-        
-        const croppedDataUrl = cropCanvas.toDataURL('image/png')
-        onSave(croppedDataUrl)
+    try {
+      const cropCanvas = document.createElement('canvas')
+      const cropSize = 800
+      cropCanvas.width = cropSize
+      cropCanvas.height = cropSize
+      const cropCtx = cropCanvas.getContext('2d')
+      
+      if (!cropCtx) {
+        throw new Error('Не може да се създаде context за canvas')
       }
       
-      overlayImg.onerror = () => {
-        const croppedDataUrl = cropCanvas.toDataURL('image/png')
-        onSave(croppedDataUrl)
+      const centerX = canvas.width / 2
+      const centerY = canvas.height / 2
+      
+      cropCtx.save()
+      
+      const scaleFactor = cropSize / canvas.width
+      cropCtx.scale(scaleFactor, scaleFactor)
+      
+      cropCtx.translate(centerX + transform.x, centerY + transform.y)
+      cropCtx.rotate((transform.rotation * Math.PI) / 180)
+      cropCtx.scale(transform.scale, transform.scale)
+      
+      cropCtx.drawImage(img, -img.width / 2, -img.height / 2, img.width, img.height)
+      
+      cropCtx.restore()
+      
+      const finalizeCrop = () => {
+        try {
+          const croppedDataUrl = cropCanvas.toDataURL('image/png', 0.95)
+          onSave(croppedDataUrl)
+        } catch (error) {
+          console.error('Грешка при създаване на dataURL:', error)
+          throw error
+        }
       }
       
-      overlayImg.src = customOverlay.dataUrl
-    } else {
-      const overlayDiv = document.createElement('div')
-      overlayDiv.style.position = 'absolute'
-      overlayDiv.style.left = '-9999px'
-      document.body.appendChild(overlayDiv)
-      
-      const root = document.createElement('div')
-      overlayDiv.appendChild(root)
-      
-      const svgContainer = document.createElement('div')
-      svgContainer.innerHTML = `
-        <svg width="${cropSize}" height="${cropSize}" viewBox="0 0 ${cropSize} ${cropSize}" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="glowGradient" cx="50%" cy="50%">
-              <stop offset="0%" stop-color="rgba(59, 130, 246, 0.3)" />
-              <stop offset="50%" stop-color="rgba(59, 130, 246, 0.15)" />
-              <stop offset="100%" stop-color="rgba(59, 130, 246, 0.05)" />
-            </radialGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(59, 130, 246, 0.1)" stroke-width="1"/>
-            </pattern>
-          </defs>
-          ${generateOverlaySVGContent(cropSize)}
-        </svg>
-      `
-      
-      const svgElement = svgContainer.querySelector('svg')
-      if (!svgElement) {
-        document.body.removeChild(overlayDiv)
-        return
+      if (customOverlay) {
+        const overlayImg = new Image()
+        
+        const overlayTimeout = setTimeout(() => {
+          console.warn('Timeout при зареждане на overlay')
+          finalizeCrop()
+        }, 5000)
+        
+        overlayImg.onload = () => {
+          clearTimeout(overlayTimeout)
+          try {
+            cropCtx.globalAlpha = 0.6
+            cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
+            cropCtx.globalAlpha = 1.0
+            finalizeCrop()
+          } catch (error) {
+            console.error('Грешка при рисуване на overlay:', error)
+            finalizeCrop()
+          }
+        }
+        
+        overlayImg.onerror = () => {
+          clearTimeout(overlayTimeout)
+          console.warn('Грешка при зареждане на overlay, продължава без него')
+          finalizeCrop()
+        }
+        
+        overlayImg.src = customOverlay.dataUrl
+      } else {
+        const overlayDiv = document.createElement('div')
+        overlayDiv.style.position = 'absolute'
+        overlayDiv.style.left = '-9999px'
+        document.body.appendChild(overlayDiv)
+        
+        try {
+          const root = document.createElement('div')
+          overlayDiv.appendChild(root)
+          
+          const svgContainer = document.createElement('div')
+          svgContainer.innerHTML = `
+            <svg width="${cropSize}" height="${cropSize}" viewBox="0 0 ${cropSize} ${cropSize}" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="glowGradient" cx="50%" cy="50%">
+                  <stop offset="0%" stop-color="rgba(59, 130, 246, 0.3)" />
+                  <stop offset="50%" stop-color="rgba(59, 130, 246, 0.15)" />
+                  <stop offset="100%" stop-color="rgba(59, 130, 246, 0.05)" />
+                </radialGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+                <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                  <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(59, 130, 246, 0.1)" stroke-width="1"/>
+                </pattern>
+              </defs>
+              ${generateOverlaySVGContent(cropSize)}
+            </svg>
+          `
+          
+          const svgElement = svgContainer.querySelector('svg')
+          if (!svgElement) {
+            document.body.removeChild(overlayDiv)
+            finalizeCrop()
+            return
+          }
+          
+          const svgData = new XMLSerializer().serializeToString(svgElement)
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+          const svgUrl = URL.createObjectURL(svgBlob)
+          
+          const overlayImg = new Image()
+          
+          const svgTimeout = setTimeout(() => {
+            console.warn('Timeout при зареждане на SVG overlay')
+            URL.revokeObjectURL(svgUrl)
+            document.body.removeChild(overlayDiv)
+            finalizeCrop()
+          }, 5000)
+          
+          overlayImg.onload = () => {
+            clearTimeout(svgTimeout)
+            try {
+              cropCtx.globalAlpha = 0.6
+              cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
+              cropCtx.globalAlpha = 1.0
+              
+              URL.revokeObjectURL(svgUrl)
+              document.body.removeChild(overlayDiv)
+              
+              finalizeCrop()
+            } catch (error) {
+              console.error('Грешка при рисуване на SVG:', error)
+              URL.revokeObjectURL(svgUrl)
+              document.body.removeChild(overlayDiv)
+              finalizeCrop()
+            }
+          }
+          
+          overlayImg.onerror = () => {
+            clearTimeout(svgTimeout)
+            console.warn('Грешка при зареждане на SVG, продължава без overlay')
+            URL.revokeObjectURL(svgUrl)
+            document.body.removeChild(overlayDiv)
+            finalizeCrop()
+          }
+          
+          overlayImg.src = svgUrl
+        } catch (error) {
+          console.error('Грешка при създаване на SVG overlay:', error)
+          document.body.removeChild(overlayDiv)
+          finalizeCrop()
+        }
       }
-      
-      const svgData = new XMLSerializer().serializeToString(svgElement)
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-      const svgUrl = URL.createObjectURL(svgBlob)
-      
-      const overlayImg = new Image()
-      overlayImg.onload = () => {
-        cropCtx.globalAlpha = 0.6
-        cropCtx.drawImage(overlayImg, 0, 0, cropSize, cropSize)
-        cropCtx.globalAlpha = 1.0
-        
-        const croppedDataUrl = cropCanvas.toDataURL('image/png')
-        
-        URL.revokeObjectURL(svgUrl)
-        document.body.removeChild(overlayDiv)
-        
-        onSave(croppedDataUrl)
-      }
-      
-      overlayImg.onerror = () => {
-        URL.revokeObjectURL(svgUrl)
-        document.body.removeChild(overlayDiv)
-        
-        const croppedDataUrl = cropCanvas.toDataURL('image/png')
-        onSave(croppedDataUrl)
-      }
-      
-      overlayImg.src = svgUrl
+    } catch (error) {
+      console.error('Фатална грешка при запазване:', error)
+      toast.error('Грешка при обработка на изображението')
     }
   }
   
@@ -411,112 +497,146 @@ export default function IrisCropEditor({ imageDataUrl, side, onSave, onCancel }:
             </Button>
           </div>
           
-          {/* Instructions */}
-          <div className="mb-4 p-3 bg-primary/10 rounded-lg text-xs md:text-sm">
-            <p className="font-semibold mb-1">📱 Инструкции:</p>
-            <ul className="space-y-1 text-muted-foreground">
-              <li>• <strong>Плъзгане:</strong> 1 пръст за преместване</li>
-              <li>• <strong>Мащабиране:</strong> 2 пръста за увеличаване/намаляване или колелце на мишката</li>
-              <li>• <strong>Цел:</strong> Подравнете ириса с шаблона</li>
-            </ul>
-          </div>
+          {/* Error message */}
+          {imageError && (
+            <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-destructive font-semibold">⚠️ Грешка при зареждане на изображението</p>
+              <p className="text-sm text-destructive/80 mt-1">
+                Изображението не може да бъде заредено. Моля, опитайте с друга снимка.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onCancel}
+                className="mt-3"
+              >
+                Връщане назад
+              </Button>
+            </div>
+          )}
           
-          {/* Editor area */}
-          <div 
-            ref={containerRef}
-            className="relative mb-4 mx-auto"
-            style={{ 
-              width: '100%',
-              maxWidth: `${canvasSize.width}px`,
-              touchAction: 'none'
-            }}
-          >
-            <div className="relative" style={{ aspectRatio: '1/1' }}>
-              {/* Canvas for image */}
-              <canvas
-                ref={canvasRef}
-                width={canvasSize.width}
-                height={canvasSize.height}
-                className="absolute inset-0 rounded-lg touch-none cursor-move"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
-                style={{ 
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)'
-                }}
-              />
-              
-              {/* Iridology overlay */}
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <IridologyOverlay size={canvasSize.width} className="opacity-80" />
+          {/* Loading message */}
+          {!imageLoaded && !imageError && (
+            <div className="mb-4 p-4 bg-primary/10 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+                <p className="text-sm font-medium">Зареждане на изображението...</p>
               </div>
             </div>
-          </div>
+          )}
           
-          {/* Control buttons */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleZoomIn}
-              className="gap-2 flex-1 md:flex-initial"
-            >
-              <MagnifyingGlassPlus size={18} />
-              Увеличи
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleZoomOut}
-              className="gap-2 flex-1 md:flex-initial"
-            >
-              <MagnifyingGlassMinus size={18} />
-              Намали
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRotate}
-              className="gap-2 flex-1 md:flex-initial"
-            >
-              <ArrowsClockwise size={18} />
-              Завърти
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="gap-2 flex-1 md:flex-initial"
-            >
-              Нулирай
-            </Button>
-          </div>
+          {/* Instructions */}
+          {imageLoaded && !imageError && (
+            <div className="mb-4 p-3 bg-primary/10 rounded-lg text-xs md:text-sm">
+              <p className="font-semibold mb-1">📱 Инструкции:</p>
+              <ul className="space-y-1 text-muted-foreground">
+                <li>• <strong>Плъзгане:</strong> 1 пръст за преместване</li>
+                <li>• <strong>Мащабиране:</strong> 2 пръста за увеличаване/намаляване или колелце на мишката</li>
+                <li>• <strong>Цел:</strong> Подравнете ириса с шаблона</li>
+              </ul>
+            </div>
+          )}
           
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={onCancel}
-              className="flex-1 hidden md:flex gap-2"
-            >
-              <X size={20} />
-              Отказ
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="flex-1 gap-2 bg-primary hover:bg-primary/90"
-            >
-              <Check size={20} weight="bold" />
-              Запази
-            </Button>
-          </div>
+          {/* Editor area */}
+          {imageLoaded && !imageError && (
+            <>
+              <div 
+                ref={containerRef}
+                className="relative mb-4 mx-auto"
+                style={{ 
+                  width: '100%',
+                  maxWidth: `${canvasSize.width}px`,
+                  touchAction: 'none'
+                }}
+              >
+                <div className="relative" style={{ aspectRatio: '1/1' }}>
+                  {/* Canvas for image */}
+                  <canvas
+                    ref={canvasRef}
+                    width={canvasSize.width}
+                    height={canvasSize.height}
+                    className="absolute inset-0 rounded-lg touch-none cursor-move"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onWheel={handleWheel}
+                    style={{ 
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)'
+                    }}
+                  />
+                  
+                  {/* Iridology overlay */}
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <IridologyOverlay size={canvasSize.width} className="opacity-80" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Control buttons */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  className="gap-2 flex-1 md:flex-initial"
+                >
+                  <MagnifyingGlassPlus size={18} />
+                  Увеличи
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  className="gap-2 flex-1 md:flex-initial"
+                >
+                  <MagnifyingGlassMinus size={18} />
+                  Намали
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRotate}
+                  className="gap-2 flex-1 md:flex-initial"
+                >
+                  <ArrowsClockwise size={18} />
+                  Завърти
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReset}
+                  className="gap-2 flex-1 md:flex-initial"
+                >
+                  Нулирай
+                </Button>
+              </div>
+              
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onCancel}
+                  className="flex-1 hidden md:flex gap-2"
+                >
+                  <X size={20} />
+                  Отказ
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  className="flex-1 gap-2 bg-primary hover:bg-primary/90"
+                >
+                  <Check size={20} weight="bold" />
+                  Запази
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </Card>
     </motion.div>
