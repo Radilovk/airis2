@@ -31,9 +31,21 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   const fileReaderRef = useRef<FileReader | null>(null)
 
   useEffect(() => {
+    const environment = window.location.hostname.includes('preview') ? 'PREVIEW' : 
+                       window.location.hostname.includes('localhost') ? 'LOCAL' : 'PRODUCTION'
+    console.log(`🌍 [UPLOAD] Environment: ${environment}`)
+    console.log(`🌍 [UPLOAD] Hostname: ${window.location.hostname}`)
+    
     uploadDiagnostics.startSession()
-    uploadDiagnostics.log('COMPONENT_MOUNT', 'info', { component: 'ImageUploadScreen' })
-    errorLogger.info('UPLOAD_MOUNT', 'ImageUploadScreen mounted')
+    uploadDiagnostics.log('COMPONENT_MOUNT', 'info', { 
+      component: 'ImageUploadScreen',
+      environment,
+      hostname: window.location.hostname
+    })
+    errorLogger.info('UPLOAD_MOUNT', 'ImageUploadScreen mounted', {
+      environment,
+      hostname: window.location.hostname
+    })
     isMountedRef.current = true
     return () => {
       uploadDiagnostics.log('COMPONENT_UNMOUNT', 'info', { component: 'ImageUploadScreen' })
@@ -51,10 +63,13 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
   }, [])
 
   const compressImage = async (dataUrl: string, maxWidth: number = 400, quality: number = 0.55): Promise<string> => {
+    const startTime = performance.now()
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
         try {
+          const originalWidth = img.width
+          const originalHeight = img.height
           const canvas = document.createElement('canvas')
           let width = img.width
           let height = img.height
@@ -76,8 +91,19 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
           ctx.drawImage(img, 0, 0, width, height)
           
           const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+          const endTime = performance.now()
+          const duration = Math.round(endTime - startTime)
           
-          console.log(`📸 [COMPRESS] Компресия: ${Math.round(dataUrl.length / 1024)} KB -> ${Math.round(compressedDataUrl.length / 1024)} KB`)
+          const inputSizeKB = Math.round(dataUrl.length / 1024)
+          const outputSizeKB = Math.round(compressedDataUrl.length / 1024)
+          const reductionPercent = Math.round(((inputSizeKB - outputSizeKB) / inputSizeKB) * 100)
+          
+          console.log(`📸 [COMPRESS] ========== Compression Details ==========`)
+          console.log(`📸 [COMPRESS] Dimensions: ${originalWidth}×${originalHeight} → ${width}×${height}`)
+          console.log(`📸 [COMPRESS] Quality: ${quality}`)
+          console.log(`📸 [COMPRESS] Size: ${inputSizeKB} KB → ${outputSizeKB} KB (${reductionPercent}% reduction)`)
+          console.log(`📸 [COMPRESS] Duration: ${duration}ms`)
+          console.log(`📸 [COMPRESS] ================================================`)
           
           resolve(compressedDataUrl)
         } catch (error) {
@@ -184,40 +210,62 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
           dataUrlSizeKB: Math.round(dataUrl.length / 1024)
         })
 
-        console.log(`📸 [UPLOAD] Оригинален размер на изображението: ${Math.round(dataUrl.length / 1024)} KB`)
+        const originalSizeKB = Math.round(dataUrl.length / 1024)
+        console.log(`📸 [UPLOAD] Оригинален размер на изображението: ${originalSizeKB} KB`)
+        console.log(`📸 [UPLOAD] Оригинален файл: ${file.name}, тип: ${file.type}, размер: ${Math.round(file.size / 1024)} KB`)
         
         uploadDiagnostics.log('COMPRESS_START_1ST_PASS', 'start', {
-          originalSizeKB: Math.round(dataUrl.length / 1024)
+          originalSizeKB,
+          originalFileSize: Math.round(file.size / 1024),
+          fileName: file.name,
+          fileType: file.type,
+          side
         })
         let compressedDataUrl = await compressImage(dataUrl, 400, 0.55)
+        const afterFirstPassKB = Math.round(compressedDataUrl.length / 1024)
         uploadDiagnostics.log('COMPRESS_END_1ST_PASS', 'success', {
-          compressedSizeKB: Math.round(compressedDataUrl.length / 1024)
+          compressedSizeKB: afterFirstPassKB,
+          reductionPercent: Math.round(((originalSizeKB - afterFirstPassKB) / originalSizeKB) * 100)
         })
         
-        console.log(`📸 [UPLOAD] Компресиран размер (1st pass): ${Math.round(compressedDataUrl.length / 1024)} KB`)
+        console.log(`📸 [UPLOAD] Компресиран размер (1st pass): ${afterFirstPassKB} KB (намаление: ${Math.round(((originalSizeKB - afterFirstPassKB) / originalSizeKB) * 100)}%)`)
         
         if (compressedDataUrl.length > 120 * 1024) {
           console.warn('⚠️ [UPLOAD] Изображението е все още голямо, допълнителна компресия...')
           uploadDiagnostics.log('COMPRESS_START_2ND_PASS', 'start', {
-            currentSizeKB: Math.round(compressedDataUrl.length / 1024)
+            currentSizeKB: afterFirstPassKB
           })
           compressedDataUrl = await compressImage(compressedDataUrl, 350, 0.45)
+          const afterSecondPassKB = Math.round(compressedDataUrl.length / 1024)
           uploadDiagnostics.log('COMPRESS_END_2ND_PASS', 'success', {
-            finalSizeKB: Math.round(compressedDataUrl.length / 1024)
+            finalSizeKB: afterSecondPassKB,
+            totalReductionPercent: Math.round(((originalSizeKB - afterSecondPassKB) / originalSizeKB) * 100)
           })
-          console.log(`📸 [UPLOAD] Допълнително компресиран (2nd pass): ${Math.round(compressedDataUrl.length / 1024)} KB`)
+          console.log(`📸 [UPLOAD] Допълнително компресиран (2nd pass): ${afterSecondPassKB} KB (общо намаление: ${Math.round(((originalSizeKB - afterSecondPassKB) / originalSizeKB) * 100)}%)`)
         }
         
-        if (compressedDataUrl.length > 150 * 1024) {
+        const finalSizeKB = Math.round(compressedDataUrl.length / 1024)
+        console.log(`📸 [UPLOAD] ========== FINAL COMPRESSION RESULT ==========`)
+        console.log(`📸 [UPLOAD] Original: ${originalSizeKB} KB → Final: ${finalSizeKB} KB`)
+        console.log(`📸 [UPLOAD] Total reduction: ${Math.round(((originalSizeKB - finalSizeKB) / originalSizeKB) * 100)}%`)
+        console.log(`📸 [UPLOAD] Checking against limit: ${finalSizeKB} KB vs 200 KB max`)
+        
+        if (compressedDataUrl.length > 200 * 1024) {
           uploadDiagnostics.log('COMPRESS_ERROR_TOO_LARGE', 'error', {
-            finalSizeKB: Math.round(compressedDataUrl.length / 1024),
-            maxSizeKB: 150
+            finalSizeKB,
+            maxSizeKB: 200,
+            originalSizeKB,
+            fileName: file.name,
+            fileType: file.type,
+            side
           })
-          console.error('❌ [UPLOAD] Изображението е твърде голямо дори след компресия!')
-          toast.error('Изображението е твърде голямо. Моля, опитайте с по-малка снимка.')
+          console.error(`❌ [UPLOAD] Изображението е твърде голямо дори след компресия! (${finalSizeKB} KB > 200 KB)`)
+          toast.error(`Изображението е твърде голямо (${finalSizeKB} KB). Моля, опитайте с по-малка снимка.`)
           setIsProcessing(false)
           return
         }
+        
+        console.log(`✅ [UPLOAD] Compression successful! Final size ${finalSizeKB} KB is within limit.`)
         
         if (!isMountedRef.current) {
           uploadDiagnostics.log('COMPONENT_UNMOUNTED_AFTER_COMPRESS', 'warning')
@@ -371,10 +419,10 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
         console.log(`📊 [UPLOAD] Size after 2nd pass: ${Math.round(finalImage.length / 1024)} KB`)
       }
       
-      if (finalImage.length > 150 * 1024) {
+      if (finalImage.length > 200 * 1024) {
         uploadDiagnostics.log('CROP_COMPRESS_ERROR_TOO_LARGE', 'error', {
           finalSize: Math.round(finalImage.length / 1024),
-          maxSize: 150
+          maxSize: 200
         })
         console.error('❌ [UPLOAD] Image too large even after aggressive compression!')
         errorLogger.error('UPLOAD_CROP_SAVE', 'Image too large after compression', undefined, {
