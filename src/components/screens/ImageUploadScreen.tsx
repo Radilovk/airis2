@@ -755,7 +755,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
                     <input
                       ref={leftInputRef}
                       type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      accept="image/*"
                       className="hidden"
                       disabled={isProcessing}
                       onChange={(e) => {
@@ -826,7 +826,7 @@ export default function ImageUploadScreen({ onComplete, initialLeft = null, init
                     <input
                       ref={rightInputRef}
                       type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      accept="image/*"
                       className="hidden"
                       disabled={isProcessing}
                       onChange={(e) => {
