@@ -14,6 +14,7 @@ import {
   Info
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
+import JSZip from 'jszip'
 
 export default function ProjectExportTab() {
   const [isExporting, setIsExporting] = useState(false)
@@ -79,7 +80,6 @@ export default function ProjectExportTab() {
       setExportProgress('Четене на файлове от проекта...')
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      const JSZip = (await import('jszip')).default
       const zip = new JSZip()
 
       const filesToRead = [
