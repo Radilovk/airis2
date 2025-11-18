@@ -26,7 +26,8 @@ import {
   Eye,
   FileText,
   Robot,
-  PencilSimple
+  PencilSimple,
+  ClockCounterClockwise
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import type { AIModelConfig, IridologyTextbook, CustomOverlay, IridologyManual, AIPromptTemplate } from '@/types'
@@ -35,6 +36,7 @@ import QuestionnaireManager from '@/components/admin/QuestionnaireManager'
 import IridologyManualTab from '@/components/admin/IridologyManualTab'
 import AIPromptTab from '@/components/admin/AIPromptTab'
 import EditorModeTab from '@/components/admin/EditorModeTab'
+import ChangelogTab from '@/components/admin/ChangelogTab'
 import { DEFAULT_IRIDOLOGY_MANUAL, DEFAULT_AI_PROMPT } from '@/lib/default-prompts'
 
 interface AdminScreenProps {
@@ -374,7 +376,7 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
         </div>
 
         <Tabs defaultValue="ai-config" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 gap-1 h-auto p-1">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-7 gap-1 h-auto p-1">
             <TabsTrigger value="ai-config" className="flex items-center justify-center gap-1 text-xs md:text-sm px-2 py-2 md:py-2.5">
               <Brain className="w-4 h-4 md:mr-1" />
               <span className="hidden sm:inline">AI Модел</span>
@@ -400,9 +402,15 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
               <span className="hidden sm:inline">Ресурси</span>
               <span className="sm:hidden">Файлове</span>
             </TabsTrigger>
-            <TabsTrigger value="questionnaire" className="flex items-center justify-center gap-1 text-xs md:text-sm px-2 py-2 md:py-2.5 col-span-3 md:col-span-1">
+            <TabsTrigger value="questionnaire" className="flex items-center justify-center gap-1 text-xs md:text-sm px-2 py-2 md:py-2.5">
               <CheckCircle className="w-4 h-4 md:mr-1" />
-              <span>Въпросник</span>
+              <span className="hidden lg:inline">Въпросник</span>
+              <span className="lg:hidden">Форма</span>
+            </TabsTrigger>
+            <TabsTrigger value="changelog" className="flex items-center justify-center gap-1 text-xs md:text-sm px-2 py-2 md:py-2.5">
+              <ClockCounterClockwise className="w-4 h-4 md:mr-1" />
+              <span className="hidden lg:inline">Промени</span>
+              <span className="lg:hidden">Лог</span>
             </TabsTrigger>
           </TabsList>
 
@@ -830,151 +838,18 @@ export default function AdminScreen({ onBack }: AdminScreenProps) {
           <QuestionnaireManager />
         </motion.div>
           </TabsContent>
+
+          <TabsContent value="changelog">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChangelogTab />
+            </motion.div>
+          </TabsContent>
         </Tabs>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                <ImageIcon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
-                Иридологичен Overlay Map
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Качете персонализиран overlay шаблон за използване при оразмеряване на изображения
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {customOverlay ? (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg border bg-card space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-1">
-                        <p className="font-medium">{customOverlay.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Badge variant="outline">
-                            {customOverlay.type.toUpperCase()}
-                          </Badge>
-                          <span>•</span>
-                          <span>
-                            {new Date(customOverlay.uploadDate).toLocaleDateString('bg-BG')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowOverlayPreview(!showOverlayPreview)}
-                          className="gap-1 md:gap-2 text-xs md:text-sm"
-                        >
-                          <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                          <span className="hidden sm:inline">{showOverlayPreview ? 'Скрий' : 'Преглед'}</span>
-                          <span className="sm:hidden">{showOverlayPreview ? '▲' : '▼'}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRemoveOverlay}
-                          className="gap-1 md:gap-2 text-destructive hover:text-destructive text-xs md:text-sm"
-                        >
-                          <Trash className="w-3 h-3 md:w-4 md:h-4" />
-                          <span className="hidden sm:inline">Премахни</span>
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {showOverlayPreview && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 flex justify-center p-2 md:p-4 bg-black/5 rounded-lg"
-                      >
-                        <div className="relative w-48 h-48 md:w-64 md:h-64">
-                          <IridologyOverlay size={256} className="opacity-90 w-full h-full" />
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                  
-                  <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                    <p className="text-xs text-muted-foreground">
-                      💡 Персонализираният overlay се използва при оразмеряване на изображения и остава върху запазените снимки за визуализация.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                    <ImageIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-sm font-medium mb-2">
-                      Използва се стандартния overlay шаблон
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Качете персонализиран SVG или PNG файл
-                    </p>
-                    <Label htmlFor="overlay-upload" className="cursor-pointer">
-                      <div className="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm md:text-base">
-                        <Upload className="w-4 h-4" />
-                        Качи Overlay Map
-                      </div>
-                      <Input
-                        id="overlay-upload"
-                        type="file"
-                        accept=".svg,.png,image/svg+xml,image/png"
-                        onChange={handleOverlayUpload}
-                        className="hidden"
-                      />
-                    </Label>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">Предварителен преглед на стандартния overlay:</p>
-                    <div className="flex justify-center p-2 md:p-4 bg-black/5 rounded-lg border">
-                      <div className="relative w-48 h-48 md:w-64 md:h-64">
-                        <IridologyOverlay size={256} className="opacity-90 w-full h-full" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-2 md:p-3 bg-secondary/50 rounded-lg">
-                    <p className="text-xs font-semibold mb-2">📋 Изисквания за overlay:</p>
-                    <ul className="text-xs text-muted-foreground space-y-1 break-words">
-                      <li>• Формат: SVG (препоръчва се) или PNG</li>
-                      <li>• Квадратен формат с еднакви размери (напр. 800x800px)</li>
-                      <li>• Центриран дизайн с концентрични кръгове</li>
-                      <li>• Прозрачен фон или светъл overlay</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-              
-              {customOverlay && (
-                <div className="pt-4">
-                  <Label htmlFor="overlay-replace" className="cursor-pointer block">
-                    <Button variant="outline" className="w-full gap-2" asChild>
-                      <div>
-                        <Upload className="w-4 h-4" />
-                        Качи нов Overlay Map
-                      </div>
-                    </Button>
-                    <Input
-                      id="overlay-replace"
-                      type="file"
-                      accept=".svg,.png,image/svg+xml,image/png"
-                      onChange={handleOverlayUpload}
-                      className="hidden"
-                    />
-                  </Label>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </div>
   )
