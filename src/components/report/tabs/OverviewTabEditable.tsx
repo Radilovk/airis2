@@ -15,7 +15,8 @@ import {
   Drop,
   Moon,
   Lightning,
-  Barbell
+  Barbell,
+  CaretDown
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import type { AnalysisReport, EditorModeConfig, ReportContainer } from '@/types'
@@ -27,6 +28,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import EditableContainer from '../EditableContainer'
+import EditableElement from '../EditableElement'
+import { useEditableElements } from '@/hooks/use-editable-elements'
 import {
   DndContext, 
   closestCenter,
@@ -47,6 +50,7 @@ import { toast } from 'sonner'
 interface OverviewTabEditableProps {
   report: AnalysisReport
   avgHealth: number
+  editorMode?: boolean
 }
 
 const DEFAULT_CONTAINERS: ReportContainer[] = [
@@ -129,7 +133,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
   },
 ]
 
-export default function OverviewTabEditable({ report, avgHealth }: OverviewTabEditableProps) {
+export default function OverviewTabEditable({ report, avgHealth, editorMode = true }: OverviewTabEditableProps) {
   const [editorConfig, setEditorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
     enabled: false,
     moduleOrder: [],
@@ -143,7 +147,10 @@ export default function OverviewTabEditable({ report, avgHealth }: OverviewTabEd
       : DEFAULT_CONTAINERS
   )
 
-  const [expandedBio, setExpandedBio] = useState(false)
+  const [expandedBio, setExpandedBio] = useState(true)
+  const [expandedGoalAnalysis, setExpandedGoalAnalysis] = useState(true)
+  
+  const elementEditor = useEditableElements('overview', editorConfig?.enabled || editorMode)
   
   const sensors = useSensors(
     useSensor(PointerSensor),

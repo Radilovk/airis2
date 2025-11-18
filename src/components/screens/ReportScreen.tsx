@@ -17,11 +17,13 @@ import { motion } from 'framer-motion'
 import type { AnalysisReport, EditorModeConfig, ReportModule } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
 import OverviewTabEditable from '@/components/report/tabs/OverviewTabEditable'
+import OverviewTabFullyEditable from '@/components/report/tabs/OverviewTabFullyEditable'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import IridologyTabEditable from '@/components/report/tabs/IridologyTabEditable'
 import PlanTab from '@/components/report/tabs/PlanTab'
 import PlanTabEditable from '@/components/report/tabs/PlanTabEditable'
 import ReportEditorMode from '@/components/report/ReportEditorMode'
+import EditorSidebar from '@/components/report/EditorSidebar'
 import { ErrorBoundary } from 'react-error-boundary'
 import { useKV } from '@github/spark/hooks'
 import { Card } from '@/components/ui/card'
@@ -573,7 +575,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     switch (module.type) {
       case 'overview':
         return editorConfig?.enabled 
-          ? <OverviewTabEditable report={report} avgHealth={avgHealth} />
+          ? <OverviewTabFullyEditable report={report} avgHealth={avgHealth} editorMode={editorConfig.enabled} />
           : <OverviewTab report={report} avgHealth={avgHealth} />
       case 'iridology':
         return editorConfig?.enabled
@@ -696,20 +698,28 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
         </motion.div>
 
         {editorConfig?.enabled ? (
-          <ReportEditorMode>
-            {(modules) => (
-              <div className="space-y-3">
-                {modules.map((module) => (
-                  <ErrorBoundary 
-                    key={module.id} 
-                    fallbackRender={({ error }) => <ErrorFallback error={error} />}
-                  >
-                    {renderModuleContent(module)}
-                  </ErrorBoundary>
-                ))}
-              </div>
-            )}
-          </ReportEditorMode>
+          <div className="space-y-4">
+            <div className="flex justify-end gap-2">
+              <EditorSidebar moduleId="overview-tab" moduleName="Общо състояние" />
+              <EditorSidebar moduleId="iridology-tab" moduleName="Иридологичен Анализ" />
+              <EditorSidebar moduleId="plan-tab" moduleName="План за Действие" />
+            </div>
+            
+            <ReportEditorMode>
+              {(modules) => (
+                <div className="space-y-3">
+                  {modules.map((module) => (
+                    <ErrorBoundary 
+                      key={module.id} 
+                      fallbackRender={({ error }) => <ErrorFallback error={error} />}
+                    >
+                      {renderModuleContent(module)}
+                    </ErrorBoundary>
+                  ))}
+                </div>
+              )}
+            </ReportEditorMode>
+          </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 h-auto p-1.5 bg-muted/50 rounded-xl shadow-inner">
