@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import type { AnalysisReport, EditorModeConfig, ReportModule } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
+import OverviewTabEditable from '@/components/report/tabs/OverviewTabEditable'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import PlanTab from '@/components/report/tabs/PlanTab'
 import ReportEditorMode from '@/components/report/ReportEditorMode'
@@ -56,9 +57,9 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
   const [editorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
     enabled: false,
     moduleOrder: [
-      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
-      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
-      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [], containers: [] },
+      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [], containers: [] },
+      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [], containers: [] },
     ],
     lastModified: new Date().toISOString()
   })
@@ -569,7 +570,9 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     
     switch (module.type) {
       case 'overview':
-        return <OverviewTab report={report} avgHealth={avgHealth} />
+        return editorConfig?.enabled 
+          ? <OverviewTabEditable report={report} avgHealth={avgHealth} />
+          : <OverviewTab report={report} avgHealth={avgHealth} />
       case 'iridology':
         return <IridologyTab report={report} />
       case 'plan':

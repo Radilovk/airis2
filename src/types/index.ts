@@ -173,9 +173,29 @@ export interface AIPromptTemplate {
 export interface ReportModuleComment {
   id: string
   moduleId: string
+  containerId?: string
   text: string
   timestamp: string
   resolved: boolean
+  author?: string
+}
+
+export interface ReportContainer {
+  id: string
+  moduleId: string
+  type: 'card' | 'chart' | 'list' | 'text' | 'image' | 'collapsible' | 'custom'
+  title: string
+  visible: boolean
+  order: number
+  comments: ReportModuleComment[]
+  interactive: boolean
+  metadata?: {
+    icon?: string
+    priority?: 'high' | 'medium' | 'low'
+    chartType?: string
+    dataKey?: string
+    [key: string]: any
+  }
 }
 
 export interface ReportModule {
@@ -185,10 +205,13 @@ export interface ReportModule {
   visible: boolean
   order: number
   comments: ReportModuleComment[]
+  containers: ReportContainer[]
 }
 
 export interface EditorModeConfig {
   enabled: boolean
   moduleOrder: ReportModule[]
   lastModified: string
+  showContainerBorders?: boolean
+  showContainerLabels?: boolean
 }

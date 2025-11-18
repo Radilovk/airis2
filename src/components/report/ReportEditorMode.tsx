@@ -244,9 +244,9 @@ export default function ReportEditorMode({ children }: ReportEditorModeProps) {
   const [editorConfig, setEditorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
     enabled: false,
     moduleOrder: [
-      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
-      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
-      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [], containers: [] },
+      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [], containers: [] },
+      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [], containers: [] },
     ],
     lastModified: new Date().toISOString()
   })
@@ -363,7 +363,8 @@ export default function ReportEditorMode({ children }: ReportEditorModeProps) {
       title: `Нов Модул ${modules.length + 1}`,
       visible: true,
       order: modules.length,
-      comments: []
+      comments: [],
+      containers: []
     }
     
     setModules((items) => {

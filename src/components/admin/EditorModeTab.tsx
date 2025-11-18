@@ -26,9 +26,9 @@ export default function EditorModeTab() {
   const [editorConfig, setEditorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
     enabled: false,
     moduleOrder: [
-      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
-      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
-      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [], containers: [] },
+      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [], containers: [] },
+      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [], containers: [] },
     ],
     lastModified: new Date().toISOString()
   })
@@ -47,9 +47,9 @@ export default function EditorModeTab() {
       setEditorConfig(() => ({
         enabled: editorConfig?.enabled || false,
         moduleOrder: [
-          { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
-          { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
-          { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+          { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [], containers: [] },
+          { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [], containers: [] },
+          { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [], containers: [] },
         ],
         lastModified: new Date().toISOString()
       }))
@@ -69,13 +69,36 @@ export default function EditorModeTab() {
   }
 
   const getTotalComments = () => {
-    return editorConfig?.moduleOrder.reduce((total, module) => total + module.comments.length, 0) || 0
+    let total = 0
+    editorConfig?.moduleOrder.forEach(module => {
+      total += module.comments.length
+      module.containers?.forEach(container => {
+        total += container.comments.length
+      })
+    })
+    return total
   }
 
   const getUnresolvedComments = () => {
-    return editorConfig?.moduleOrder.reduce(
-      (total, module) => total + module.comments.filter(c => !c.resolved).length, 
-      0
+    let total = 0
+    editorConfig?.moduleOrder.forEach(module => {
+      total += module.comments.filter(c => !c.resolved).length
+      module.containers?.forEach(container => {
+        total += container.comments.filter(c => !c.resolved).length
+      })
+    })
+    return total
+  }
+
+  const getTotalContainers = () => {
+    return editorConfig?.moduleOrder.reduce((total, module) => 
+      total + (module.containers?.length || 0), 0
+    ) || 0
+  }
+
+  const getVisibleContainers = () => {
+    return editorConfig?.moduleOrder.reduce((total, module) => 
+      total + (module.containers?.filter(c => c.visible).length || 0), 0
     ) || 0
   }
 
@@ -107,7 +130,7 @@ export default function EditorModeTab() {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="bg-muted/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -116,7 +139,7 @@ export default function EditorModeTab() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{editorConfig?.moduleOrder.length || 0}</p>
-                    <p className="text-xs text-muted-foreground">Общо Модули</p>
+                    <p className="text-xs text-muted-foreground">Модули</p>
                   </div>
                 </div>
               </CardContent>
@@ -125,14 +148,12 @@ export default function EditorModeTab() {
             <Card className="bg-muted/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <Eye size={20} weight="duotone" className="text-green-600" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Info size={20} weight="duotone" className="text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">
-                      {editorConfig?.moduleOrder.filter(m => m.visible).length || 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Видими Модули</p>
+                    <p className="text-2xl font-bold">{getTotalContainers()}</p>
+                    <p className="text-xs text-muted-foreground">Контейнери ({getVisibleContainers()} видими)</p>
                   </div>
                 </div>
               </CardContent>
@@ -147,6 +168,20 @@ export default function EditorModeTab() {
                   <div>
                     <p className="text-2xl font-bold">{getUnresolvedComments()}</p>
                     <p className="text-xs text-muted-foreground">Отворени Коментари</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                    <CheckCircle size={20} weight="duotone" className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{getTotalComments() - getUnresolvedComments()}</p>
+                    <p className="text-xs text-muted-foreground">Решени Коментари</p>
                   </div>
                 </div>
               </CardContent>
@@ -216,7 +251,19 @@ export default function EditorModeTab() {
               <div>
                 <h4 className="font-semibold text-sm mb-1">Система за Коментари</h4>
                 <p className="text-sm text-muted-foreground">
-                  Добавяйте коментари и инструкции за промени към всеки модул. AI ще чете тези коментари за бъдещи подобрения.
+                  Добавяйте коментари и инструкции за промени към всеки модул и контейнер. AI ще чете тези коментари за бъдещи подобрения.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Info size={16} weight="duotone" className="text-blue-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Детайлен Контрол на Контейнери</h4>
+                <p className="text-sm text-muted-foreground">
+                  Всеки модул съдържа множество контейнери. Можете да редактирате, премествате, скривате и коментирате всеки контейнер отделно за пълен контрол.
                 </p>
               </div>
             </div>
@@ -248,15 +295,23 @@ export default function EditorModeTab() {
             <ScrollArea className="h-[400px]">
               <div className="space-y-3 pr-4">
                 {editorConfig.moduleOrder.map((module, index) => {
-                  const unresolvedComments = module.comments.filter(c => !c.resolved)
-                  const resolvedComments = module.comments.filter(c => c.resolved)
+                  const unresolvedModuleComments = module.comments.filter(c => !c.resolved)
+                  const resolvedModuleComments = module.comments.filter(c => c.resolved)
+                  
+                  let unresolvedContainerComments = 0
+                  let totalContainers = module.containers?.length || 0
+                  let visibleContainers = module.containers?.filter(c => c.visible).length || 0
+                  
+                  module.containers?.forEach(container => {
+                    unresolvedContainerComments += container.comments.filter(c => !c.resolved).length
+                  })
                   
                   return (
                     <Card key={module.id} className={cn(
                       "p-4",
                       !module.visible && "opacity-50 bg-muted/50"
                     )}>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{index + 1}</Badge>
@@ -267,23 +322,61 @@ export default function EditorModeTab() {
                               </Badge>
                             )}
                           </div>
-                          <Badge variant="outline" className="text-xs">
-                            {module.type}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {module.type}
+                            </Badge>
+                            {totalContainers > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {visibleContainers}/{totalContainers} контейнера
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
-                        {module.comments.length > 0 && (
-                          <div className="space-y-2 pl-4 border-l-2 border-muted">
-                            {unresolvedComments.length > 0 && (
+                        {totalContainers > 0 && (
+                          <div className="pl-4 space-y-1.5">
+                            <p className="text-xs font-medium text-muted-foreground">Контейнери:</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {module.containers?.slice(0, 6).map((container) => (
+                                <div 
+                                  key={container.id} 
+                                  className={cn(
+                                    "text-xs p-2 rounded border bg-background/50",
+                                    !container.visible && "opacity-50"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="truncate text-[10px]">{container.title}</span>
+                                    {container.comments.filter(c => !c.resolved).length > 0 && (
+                                      <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">
+                                        {container.comments.filter(c => !c.resolved).length}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              {totalContainers > 6 && (
+                                <div className="text-xs p-2 rounded border bg-muted/30 flex items-center justify-center text-muted-foreground">
+                                  +{totalContainers - 6} още
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {(unresolvedModuleComments.length > 0 || unresolvedContainerComments > 0) && (
+                          <div className="space-y-2 pl-4 border-l-2 border-orange-200">
+                            {unresolvedModuleComments.length > 0 && (
                               <div>
                                 <div className="flex items-center gap-2 mb-2">
                                   <Warning size={14} className="text-orange-600" />
                                   <p className="text-xs font-semibold text-orange-600">
-                                    {unresolvedComments.length} отворени коментара
+                                    {unresolvedModuleComments.length} коментар(а) за модула
                                   </p>
                                 </div>
                                 <div className="space-y-1.5">
-                                  {unresolvedComments.map((comment) => (
+                                  {unresolvedModuleComments.map((comment) => (
                                     <div key={comment.id} className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded text-xs">
                                       <p className="text-foreground/90">{comment.text}</p>
                                       <p className="text-muted-foreground text-[10px] mt-1">
@@ -295,27 +388,38 @@ export default function EditorModeTab() {
                               </div>
                             )}
 
-                            {resolvedComments.length > 0 && (
+                            {unresolvedContainerComments > 0 && (
                               <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <CheckCircle size={14} className="text-green-600" />
-                                  <p className="text-xs font-semibold text-green-600">
-                                    {resolvedComments.length} разрешени коментара
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Info size={14} className="text-blue-600" />
+                                  <p className="text-xs font-semibold text-blue-600">
+                                    {unresolvedContainerComments} коментар(а) за контейнери
                                   </p>
-                                </div>
-                                <div className="space-y-1.5">
-                                  {resolvedComments.map((comment) => (
-                                    <div key={comment.id} className="bg-muted p-2 rounded text-xs opacity-60">
-                                      <p className="line-through">{comment.text}</p>
-                                    </div>
-                                  ))}
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {module.comments.length === 0 && (
+                        {resolvedModuleComments.length > 0 && (
+                          <div className="space-y-2 pl-4 border-l-2 border-green-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle size={14} className="text-green-600" />
+                              <p className="text-xs font-semibold text-green-600">
+                                {resolvedModuleComments.length} разрешени коментара
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              {resolvedModuleComments.map((comment) => (
+                                <div key={comment.id} className="bg-muted p-2 rounded text-xs opacity-60">
+                                  <p className="line-through">{comment.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {module.comments.length === 0 && unresolvedContainerComments === 0 && (
                           <p className="text-xs text-muted-foreground pl-4">
                             Няма коментари
                           </p>
