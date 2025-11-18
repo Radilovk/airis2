@@ -1,0 +1,351 @@
+import { useState } from 'react'
+import { useKV } from '@github/spark/hooks'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { 
+  PencilSimple, 
+  Eye, 
+  ChatCircleDots, 
+  ArrowsDownUp,
+  CheckCircle,
+  Warning,
+  Info,
+  Trash
+} from '@phosphor-icons/react'
+import { toast } from 'sonner'
+import type { EditorModeConfig, ReportModuleComment } from '@/types'
+import { cn } from '@/lib/utils'
+import EditorCommentsExport from './EditorCommentsExport'
+
+export default function EditorModeTab() {
+  const [editorConfig, setEditorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
+    enabled: false,
+    moduleOrder: [
+      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
+      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
+      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+    ],
+    lastModified: new Date().toISOString()
+  })
+
+  const handleToggleEditor = (enabled: boolean) => {
+    setEditorConfig((current) => ({
+      ...current!,
+      enabled,
+      lastModified: new Date().toISOString()
+    }))
+    toast.success(enabled ? 'Editor Mode активиран' : 'Editor Mode деактивиран')
+  }
+
+  const handleResetModules = () => {
+    if (confirm('Сигурни ли сте, че искате да нулирате всички модули и коментари?')) {
+      setEditorConfig(() => ({
+        enabled: editorConfig?.enabled || false,
+        moduleOrder: [
+          { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
+          { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
+          { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+        ],
+        lastModified: new Date().toISOString()
+      }))
+      toast.success('Модулите са нулирани')
+    }
+  }
+
+  const handleClearComments = () => {
+    if (confirm('Сигурни ли сте, че искате да изтриете всички коментари?')) {
+      setEditorConfig((current) => ({
+        ...current!,
+        moduleOrder: current!.moduleOrder.map(m => ({ ...m, comments: [] })),
+        lastModified: new Date().toISOString()
+      }))
+      toast.success('Всички коментари са изтрити')
+    }
+  }
+
+  const getTotalComments = () => {
+    return editorConfig?.moduleOrder.reduce((total, module) => total + module.comments.length, 0) || 0
+  }
+
+  const getUnresolvedComments = () => {
+    return editorConfig?.moduleOrder.reduce(
+      (total, module) => total + module.comments.filter(c => !c.resolved).length, 
+      0
+    ) || 0
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <PencilSimple size={24} weight="duotone" />
+                Editor Mode
+              </CardTitle>
+              <CardDescription className="mt-2">
+                Активирайте editor mode, за да управлявате модулите в репорт страницата
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <Label htmlFor="editor-mode" className="cursor-pointer">
+                {editorConfig?.enabled ? 'Активен' : 'Неактивен'}
+              </Label>
+              <Switch
+                id="editor-mode"
+                checked={editorConfig?.enabled || false}
+                onCheckedChange={handleToggleEditor}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ArrowsDownUp size={20} weight="duotone" className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{editorConfig?.moduleOrder.length || 0}</p>
+                    <p className="text-xs text-muted-foreground">Общо Модули</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                    <Eye size={20} weight="duotone" className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {editorConfig?.moduleOrder.filter(m => m.visible).length || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Видими Модули</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                    <ChatCircleDots size={20} weight="duotone" className="text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{getUnresolvedComments()}</p>
+                    <p className="text-xs text-muted-foreground">Отворени Коментари</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Separator />
+
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleClearComments} 
+              variant="outline" 
+              size="sm"
+              disabled={getTotalComments() === 0}
+            >
+              <Trash size={16} className="mr-2" />
+              Изтрий Всички Коментари
+            </Button>
+            <Button 
+              onClick={handleResetModules} 
+              variant="outline" 
+              size="sm"
+            >
+              <ArrowsDownUp size={16} className="mr-2" />
+              Нулирай Модули
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <EditorCommentsExport />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Какво е Editor Mode?</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <ArrowsDownUp size={16} weight="duotone" className="text-primary" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Пренареждане на Модули</h4>
+                <p className="text-sm text-muted-foreground">
+                  Плъзнете и пуснете модулите, за да промените реда им в репорта
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Eye size={16} weight="duotone" className="text-green-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Управление на Видимост</h4>
+                <p className="text-sm text-muted-foreground">
+                  Скривайте или показвайте модули без да ги изтривате
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <ChatCircleDots size={16} weight="duotone" className="text-orange-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Система за Коментари</h4>
+                <p className="text-sm text-muted-foreground">
+                  Добавяйте коментари и инструкции за промени към всеки модул. AI ще чете тези коментари за бъдещи подобрения.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Trash size={16} weight="duotone" className="text-red-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm mb-1">Изтриване на Модули</h4>
+                <p className="text-sm text-muted-foreground">
+                  Премахвайте ненужни модули от репорта
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {editorConfig && editorConfig.moduleOrder.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Текущи Модули</CardTitle>
+            <CardDescription>
+              Списък с всички модули и техните коментари
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-3 pr-4">
+                {editorConfig.moduleOrder.map((module, index) => {
+                  const unresolvedComments = module.comments.filter(c => !c.resolved)
+                  const resolvedComments = module.comments.filter(c => c.resolved)
+                  
+                  return (
+                    <Card key={module.id} className={cn(
+                      "p-4",
+                      !module.visible && "opacity-50 bg-muted/50"
+                    )}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{index + 1}</Badge>
+                            <h4 className="font-semibold text-sm">{module.title}</h4>
+                            {!module.visible && (
+                              <Badge variant="secondary" className="text-xs">
+                                Скрит
+                              </Badge>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {module.type}
+                          </Badge>
+                        </div>
+
+                        {module.comments.length > 0 && (
+                          <div className="space-y-2 pl-4 border-l-2 border-muted">
+                            {unresolvedComments.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Warning size={14} className="text-orange-600" />
+                                  <p className="text-xs font-semibold text-orange-600">
+                                    {unresolvedComments.length} отворени коментара
+                                  </p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {unresolvedComments.map((comment) => (
+                                    <div key={comment.id} className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded text-xs">
+                                      <p className="text-foreground/90">{comment.text}</p>
+                                      <p className="text-muted-foreground text-[10px] mt-1">
+                                        {new Date(comment.timestamp).toLocaleString('bg-BG')}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {resolvedComments.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <CheckCircle size={14} className="text-green-600" />
+                                  <p className="text-xs font-semibold text-green-600">
+                                    {resolvedComments.length} разрешени коментара
+                                  </p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {resolvedComments.map((comment) => (
+                                    <div key={comment.id} className="bg-muted p-2 rounded text-xs opacity-60">
+                                      <p className="line-through">{comment.text}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {module.comments.length === 0 && (
+                          <p className="text-xs text-muted-foreground pl-4">
+                            Няма коментари
+                          </p>
+                        )}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-orange-200 dark:border-orange-900 bg-orange-50/50 dark:bg-orange-950/20">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info size={20} weight="duotone" className="text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Важно</h4>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Editor Mode работи само когато сте логнати като собственик</li>
+                <li>Промените в модулите се запазват автоматично</li>
+                <li>Коментарите са достъпни за AI агента за бъдещи подобрения</li>
+                <li>Използвайте коментарите, за да дадете точни инструкции за промени</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

@@ -169,3 +169,26 @@ export interface AIPromptTemplate {
   content: string
   lastModified: string
 }
+
+export interface ReportModuleComment {
+  id: string
+  moduleId: string
+  text: string
+  timestamp: string
+  resolved: boolean
+}
+
+export interface ReportModule {
+  id: string
+  type: 'overview' | 'iridology' | 'plan' | 'custom'
+  title: string
+  visible: boolean
+  order: number
+  comments: ReportModuleComment[]
+}
+
+export interface EditorModeConfig {
+  enabled: boolean
+  moduleOrder: ReportModule[]
+  lastModified: string
+}

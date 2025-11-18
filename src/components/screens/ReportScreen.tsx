@@ -14,10 +14,11 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import type { AnalysisReport } from '@/types'
+import type { AnalysisReport, EditorModeConfig, ReportModule } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import PlanTab from '@/components/report/tabs/PlanTab'
+import ReportEditorMode from '@/components/report/ReportEditorMode'
 import { ErrorBoundary } from 'react-error-boundary'
 import { useKV } from '@github/spark/hooks'
 import { Card } from '@/components/ui/card'
@@ -52,6 +53,15 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const avgHealth = Math.round((report.leftIris.overallHealth + report.rightIris.overallHealth) / 2)
   const [history, setHistory] = useKV<AnalysisReport[]>('analysis-history', [])
+  const [editorConfig] = useKV<EditorModeConfig>('editor-mode-config', {
+    enabled: false,
+    moduleOrder: [
+      { id: 'overview', type: 'overview', title: 'Обща Информация', visible: true, order: 0, comments: [] },
+      { id: 'iridology', type: 'iridology', title: 'Иридологичен Анализ', visible: true, order: 1, comments: [] },
+      { id: 'plan', type: 'plan', title: 'План за Действие', visible: true, order: 2, comments: [] },
+    ],
+    lastModified: new Date().toISOString()
+  })
   
   const handleSaveToHistory = () => {
     setHistory((current) => {
@@ -554,6 +564,28 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     }
   }
 
+  const renderModuleContent = (module: ReportModule) => {
+    if (!module.visible && !editorConfig?.enabled) return null
+    
+    switch (module.type) {
+      case 'overview':
+        return <OverviewTab report={report} avgHealth={avgHealth} />
+      case 'iridology':
+        return <IridologyTab report={report} />
+      case 'plan':
+        return <PlanTab report={report} />
+      case 'custom':
+        return (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Персонализиран модул: {module.title}</p>
+            <p className="text-xs mt-2">Добавете съдържание чрез AI инструкции в коментарите</p>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 pb-20">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm">
@@ -654,49 +686,66 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
           </div>
         </motion.div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1.5 bg-muted/50 rounded-xl shadow-inner">
-            <TabsTrigger 
-              value="overview" 
-              className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
-            >
-              <Target size={22} weight="duotone" />
-              <span className="text-xs font-semibold">Общо състояние</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="iridology" 
-              className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
-            >
-              <Activity size={22} weight="duotone" />
-              <span className="text-xs font-semibold">Анализ</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="plan" 
-              className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
-            >
-              <ClipboardText size={22} weight="duotone" />
-              <span className="text-xs font-semibold">План</span>
-            </TabsTrigger>
-          </TabsList>
+        {editorConfig?.enabled ? (
+          <ReportEditorMode>
+            {(modules) => (
+              <div className="space-y-3">
+                {modules.map((module) => (
+                  <ErrorBoundary 
+                    key={module.id} 
+                    fallbackRender={({ error }) => <ErrorFallback error={error} />}
+                  >
+                    {renderModuleContent(module)}
+                  </ErrorBoundary>
+                ))}
+              </div>
+            )}
+          </ReportEditorMode>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3 h-auto p-1.5 bg-muted/50 rounded-xl shadow-inner">
+              <TabsTrigger 
+                value="overview" 
+                className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
+              >
+                <Target size={22} weight="duotone" />
+                <span className="text-xs font-semibold">Общо състояние</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="iridology" 
+                className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
+              >
+                <Activity size={22} weight="duotone" />
+                <span className="text-xs font-semibold">Анализ</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="plan" 
+                className="flex flex-col gap-1.5 py-3 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-md transition-all"
+              >
+                <ClipboardText size={22} weight="duotone" />
+                <span className="text-xs font-semibold">План</span>
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="overview" className="mt-6">
-            <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
-              <OverviewTab report={report} avgHealth={avgHealth} />
-            </ErrorBoundary>
-          </TabsContent>
+            <TabsContent value="overview" className="mt-6">
+              <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
+                <OverviewTab report={report} avgHealth={avgHealth} />
+              </ErrorBoundary>
+            </TabsContent>
 
-          <TabsContent value="iridology" className="mt-6">
-            <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
-              <IridologyTab report={report} />
-            </ErrorBoundary>
-          </TabsContent>
+            <TabsContent value="iridology" className="mt-6">
+              <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
+                <IridologyTab report={report} />
+              </ErrorBoundary>
+            </TabsContent>
 
-          <TabsContent value="plan" className="mt-6">
-            <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
-              <PlanTab report={report} />
-            </ErrorBoundary>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="plan" className="mt-6">
+              <ErrorBoundary fallbackRender={({ error }) => <ErrorFallback error={error} />}>
+                <PlanTab report={report} />
+              </ErrorBoundary>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   )
