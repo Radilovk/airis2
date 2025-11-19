@@ -18,6 +18,7 @@ import type { AnalysisReport, EditorModeConfig, ReportModule } from '@/types'
 import OverviewTab from '@/components/report/tabs/OverviewTab'
 import OverviewTabEditable from '@/components/report/tabs/OverviewTabEditable'
 import OverviewTabFullyEditable from '@/components/report/tabs/OverviewTabFullyEditable'
+import OverviewTabWithEditor from '@/components/report/tabs/OverviewTabWithEditor'
 import IridologyTab from '@/components/report/tabs/IridologyTab'
 import IridologyTabEditable from '@/components/report/tabs/IridologyTabEditable'
 import PlanTab from '@/components/report/tabs/PlanTab'
@@ -575,7 +576,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
     switch (module.type) {
       case 'overview':
         return editorConfig?.enabled 
-          ? <OverviewTabFullyEditable report={report} avgHealth={avgHealth} editorMode={editorConfig.enabled} />
+          ? <OverviewTabWithEditor report={report} avgHealth={avgHealth} editorMode={editorConfig.enabled} />
           : <OverviewTab report={report} avgHealth={avgHealth} />
       case 'iridology':
         return editorConfig?.enabled
