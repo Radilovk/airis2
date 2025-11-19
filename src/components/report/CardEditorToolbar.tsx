@@ -135,13 +135,13 @@ export default function CardEditorToolbar({
 
   if (compact) {
     return (
-      <div className={cn('absolute z-10', positionClasses[position])}>
+      <div className={cn('absolute z-10 pointer-events-auto', positionClasses[position])}>
         <Popover open={isExpanded} onOpenChange={setIsExpanded}>
           <PopoverTrigger asChild>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 w-7 p-0 bg-background/95 backdrop-blur-sm shadow-md hover:bg-primary/10 relative"
+              className="h-7 w-7 p-0 bg-background/95 backdrop-blur-sm shadow-md hover:bg-primary/10 relative pointer-events-auto"
             >
               <DotsThreeVertical size={16} weight="bold" />
               {unresolvedComments.length > 0 && (
@@ -322,12 +322,12 @@ export default function CardEditorToolbar({
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className={cn('absolute z-10 flex gap-1', positionClasses[position])}
+      className={cn('absolute z-10 flex gap-1 pointer-events-auto', positionClasses[position])}
     >
       <Button
         size="sm"
         variant="outline"
-        className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10"
+        className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10 pointer-events-auto"
         onClick={handleToggleVisibility}
       >
         {cardState.visible ? (
@@ -340,7 +340,7 @@ export default function CardEditorToolbar({
       <Button
         size="sm"
         variant="outline"
-        className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10"
+        className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10 pointer-events-auto"
         onClick={handleToggleExpanded}
       >
         {cardState.expanded ? (
@@ -355,7 +355,7 @@ export default function CardEditorToolbar({
           <Button
             size="sm"
             variant="outline"
-            className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10 relative"
+            className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-accent/10 relative pointer-events-auto"
           >
             <ChatCircleDots size={16} weight="duotone" />
             {unresolvedComments.length > 0 && (
@@ -456,7 +456,7 @@ export default function CardEditorToolbar({
         <Button
           size="sm"
           variant="outline"
-          className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-destructive/10 text-destructive"
+          className="h-8 px-2 bg-background/95 backdrop-blur-sm shadow-md hover:bg-destructive/10 text-destructive pointer-events-auto"
           onClick={handleDelete}
         >
           <Trash size={16} weight="duotone" />

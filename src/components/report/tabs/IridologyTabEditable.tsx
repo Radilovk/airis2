@@ -329,6 +329,7 @@ export default function IridologyTabEditable({ report }: IridologyTabEditablePro
             <EditableContainer
               key={container.id}
               container={container}
+              editorMode={editorConfig?.enabled}
               onToggleVisibility={handleToggleVisibility}
               onAddComment={handleAddComment}
               onDeleteComment={handleDeleteComment}

@@ -215,16 +215,17 @@ export function EditableCard({
         )}
         
         <Card className={cn(
-          'transition-all duration-200',
-          isEditorMode && 'ring-2 ring-primary/20 hover:ring-primary/40',
-          !currentState.visible && isEditorMode && 'opacity-50'
+          'transition-all',
+          isEditorMode && 'ring-2 ring-primary/20 hover:ring-primary/40'
         )}>
           {!currentState.visible && isEditorMode && (
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
-              <span className="text-sm font-medium text-muted-foreground">Картата е скрита</span>
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center pointer-events-none">
+              <span className="text-sm font-medium text-muted-foreground pointer-events-none">Картата е скрита</span>
             </div>
           )}
-          {children}
+          <div className={cn(isEditorMode && !currentState.visible && "pointer-events-none")}>
+            {children}
+          </div>
         </Card>
       </motion.div>
     </AnimatePresence>

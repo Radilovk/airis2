@@ -226,7 +226,7 @@ function SortableModule({
         
         {children && module.visible && (
           <CardContent className="pt-0">
-            <div className="border-t pt-3 opacity-50 pointer-events-none">
+            <div className="border-t pt-3">
               {children}
             </div>
           </CardContent>

@@ -342,6 +342,7 @@ export default function PlanTabEditable({ report }: PlanTabEditableProps) {
             <EditableContainer
               key={container.id}
               container={container}
+              editorMode={editorConfig?.enabled}
               onToggleVisibility={handleToggleVisibility}
               onAddComment={handleAddComment}
               onDeleteComment={handleDeleteComment}

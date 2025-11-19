@@ -44,7 +44,7 @@ interface EditableContainerProps {
 
 export default function EditableContainer({ 
   container, 
-  editorMode = true,
+  editorMode = false,
   onToggleVisibility, 
   onDelete, 
   onAddComment,
@@ -117,14 +117,14 @@ export default function EditableContainer({
 
       <Card className={cn(
         "relative transition-all",
-        !container.visible && "opacity-40 bg-muted/30",
+        !container.visible && editorMode && "opacity-40 bg-muted/30",
         editorMode && "border-2 border-dashed",
         editorMode && container.visible && "border-primary/30 hover:border-primary/60",
         editorMode && !container.visible && "border-muted",
         isDragging && "shadow-2xl scale-[1.02] rotate-1"
       )}>
         {editorMode && (
-          <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-background/95 backdrop-blur-sm rounded-lg p-1 shadow-md border">
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-background/95 backdrop-blur-sm rounded-lg p-1 shadow-md border pointer-events-auto">
             <button
               className="cursor-grab active:cursor-grabbing touch-none p-1.5 hover:bg-muted rounded transition-colors"
               {...attributes}
@@ -138,7 +138,7 @@ export default function EditableContainer({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="relative h-8 w-8 p-0"
+                  className="relative h-8 w-8 p-0 pointer-events-auto"
                 >
                   <ChatCircleDots size={16} />
                   {unresolvedComments.length > 0 && (
@@ -231,7 +231,7 @@ export default function EditableContainer({
             {onUpdateMetadata && (
               <Dialog open={showMetadata} onOpenChange={setShowMetadata}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 pointer-events-auto">
                     <PencilSimple size={16} />
                   </Button>
                 </DialogTrigger>
@@ -274,7 +274,7 @@ export default function EditableContainer({
               variant="ghost"
               size="sm"
               onClick={() => onToggleVisibility(container.id)}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 pointer-events-auto"
             >
               {container.visible ? (
                 <Eye size={16} />
@@ -292,7 +292,7 @@ export default function EditableContainer({
                   toast.success('Контейнер изтрит')
                 }
               }}
-              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+              className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive pointer-events-auto"
               disabled={!onDelete}
             >
               <Trash size={16} />
@@ -304,8 +304,8 @@ export default function EditableContainer({
           editorMode && "pt-6"
         )}>
           {!container.visible && editorMode && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[2px] z-10 rounded-lg">
-              <Badge variant="outline" className="text-sm">
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[2px] z-10 rounded-lg pointer-events-none">
+              <Badge variant="outline" className="text-sm pointer-events-none">
                 <EyeSlash size={16} className="mr-2" />
                 Скрит
               </Badge>
