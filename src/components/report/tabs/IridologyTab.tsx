@@ -12,9 +12,7 @@ import {
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import type { AnalysisReport } from '@/types'
-import IrisWithOverlay from '@/components/iris/IrisWithOverlay'
-import IrisVisualization from '../IrisVisualization'
-import ZoneHeatmap from '../ZoneHeatmap'
+import DualIrisTopographicMap from '@/components/iris/DualIrisTopographicMap'
 import ZoneStatusPieChart from '../ZoneStatusPieChart'
 import {
   Collapsible,
@@ -152,6 +150,19 @@ export default function IridologyTab({ report }: IridologyTabProps) {
         </Card>
       </div>
       
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+      >
+        <DualIrisTopographicMap
+          leftIris={report.leftIris}
+          rightIris={report.rightIris}
+          leftImageUrl={report.leftIrisImage.dataUrl}
+          rightImageUrl={report.rightIrisImage.dataUrl}
+        />
+      </motion.div>
+      
       <Tabs defaultValue="left" className="w-full">
         <TabsList className="grid w-full grid-cols-2 h-auto p-1.5 bg-muted/50">
           <TabsTrigger value="left" className="flex items-center gap-2 py-2.5 rounded-lg">
@@ -168,40 +179,12 @@ export default function IridologyTab({ report }: IridologyTabProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-base">Ляв Ирис</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Здраве:</span>
-                  <span className="text-lg font-bold text-primary">{report.leftIris.overallHealth}/100</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-center mb-4">
-                <div className="w-full max-w-[280px]">
-                  <IrisWithOverlay 
-                    imageDataUrl={report.leftIrisImage.dataUrl}
-                    side="left"
-                    size={280}
-                  />
-                </div>
-              </div>
-
-              <IrisVisualization analysis={report.leftIris} side="left" />
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
             <Card className="p-5">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <Activity size={16} weight="duotone" className="text-primary" />
-                Иридологични Зони
+                Иридологични Зони - Ляв Ирис
               </h3>
               <div className="space-y-3">
                 {(report.leftIris?.zones || [])
@@ -284,40 +267,12 @@ export default function IridologyTab({ report }: IridologyTabProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-base">Десен Ирис</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Здраве:</span>
-                  <span className="text-lg font-bold text-primary">{report.rightIris.overallHealth}/100</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-center mb-4">
-                <div className="w-full max-w-[280px]">
-                  <IrisWithOverlay 
-                    imageDataUrl={report.rightIrisImage.dataUrl}
-                    side="right"
-                    size={280}
-                  />
-                </div>
-              </div>
-
-              <IrisVisualization analysis={report.rightIris} side="right" />
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
             <Card className="p-5">
               <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
                 <Activity size={16} weight="duotone" className="text-primary" />
-                Иридологични Зони
+                Иридологични Зони - Десен Ирис
               </h3>
               <div className="space-y-3">
                 {(report.rightIris?.zones || [])
@@ -396,17 +351,6 @@ export default function IridologyTab({ report }: IridologyTabProps) {
           )}
         </TabsContent>
       </Tabs>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.4 }}
-      >
-        <div className="grid md:grid-cols-2 gap-4">
-          <ZoneHeatmap zones={report.leftIris?.zones || []} side="left" />
-          <ZoneHeatmap zones={report.rightIris?.zones || []} side="right" />
-        </div>
-      </motion.div>
 
       {report.detailedAnalysis && (
         <motion.div

@@ -14,9 +14,7 @@ import {
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import type { AnalysisReport, EditorModeConfig, ReportContainer } from '@/types'
-import IrisWithOverlay from '@/components/iris/IrisWithOverlay'
-import IrisVisualization from '../IrisVisualization'
-import ZoneHeatmap from '../ZoneHeatmap'
+import DualIrisTopographicMap from '@/components/iris/DualIrisTopographicMap'
 import ZoneStatusPieChart from '../ZoneStatusPieChart'
 import {
   Collapsible,
@@ -58,12 +56,23 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     metadata: { chartType: 'pie' }
   },
   {
+    id: 'topographic-map-container',
+    moduleId: 'iridology',
+    type: 'custom',
+    title: 'Топографска Карта на Зоните',
+    visible: true,
+    order: 1,
+    comments: [],
+    interactive: true,
+    metadata: { icon: 'Eye' }
+  },
+  {
     id: 'zone-stats-container',
     moduleId: 'iridology',
     type: 'card',
     title: 'Статистика на Зоните',
     visible: true,
-    order: 1,
+    order: 2,
     comments: [],
     interactive: false,
     metadata: { icon: 'Activity' }
@@ -72,9 +81,9 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     id: 'iris-tabs-container',
     moduleId: 'iridology',
     type: 'custom',
-    title: 'Визуализация на Ирисите',
+    title: 'Детайли по Зони',
     visible: true,
-    order: 2,
+    order: 3,
     comments: [],
     interactive: true,
     metadata: { icon: 'Eye' }
@@ -246,6 +255,22 @@ export default function IridologyTabEditable({ report }: IridologyTabEditablePro
           </motion.div>
         )
       
+      case 'topographic-map-container':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <DualIrisTopographicMap
+              leftIris={report.leftIris}
+              rightIris={report.rightIris}
+              leftImageUrl={report.leftIrisImage.dataUrl}
+              rightImageUrl={report.rightIrisImage.dataUrl}
+            />
+          </motion.div>
+        )
+      
       case 'zone-stats-container':
         return (
           <div className="grid grid-cols-2 gap-3 p-4">
@@ -352,28 +377,8 @@ function IrisDetailsSection({ iris, irisImage, side }: {
   
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden">
-        <div className="p-5">
-          <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
-            <Eye size={20} weight="duotone" className="text-primary" />
-            {side === 'left' ? 'Ляв' : 'Десен'} Ирис - Визуализация
-          </h3>
-          <div className="flex justify-center">
-            <IrisVisualization 
-              analysis={iris}
-              side={side}
-            />
-          </div>
-        </div>
-      </Card>
-
       <Card className="p-5">
-        <h3 className="font-semibold text-base mb-4">Тепловна Карта на Зоните</h3>
-        <ZoneHeatmap zones={iris.zones} side={side} />
-      </Card>
-
-      <Card className="p-5">
-        <h3 className="font-semibold text-base mb-4">Детайли по Зони</h3>
+        <h3 className="font-semibold text-base mb-4">Детайли по Зони - {side === 'left' ? 'Ляв' : 'Десен'} Ирис</h3>
         <div className="space-y-2">
           {iris.zones?.filter((z: any) => z && z.status !== 'normal').map((zone: any, idx: number) => (
             <Collapsible 
