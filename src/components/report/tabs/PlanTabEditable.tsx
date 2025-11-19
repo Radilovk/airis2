@@ -49,45 +49,12 @@ interface PlanTabEditableProps {
 
 const DEFAULT_CONTAINERS: ReportContainer[] = [
   {
-    id: 'motivational-summary-container',
-    moduleId: 'plan',
-    type: 'card',
-    title: 'План за Действие',
-    visible: true,
-    order: 0,
-    comments: [],
-    interactive: false,
-    metadata: { icon: 'Lightbulb', priority: 'high' }
-  },
-  {
-    id: 'nutrition-chart-container',
-    moduleId: 'plan',
-    type: 'chart',
-    title: 'Хранителни Препоръки',
-    visible: true,
-    order: 1,
-    comments: [],
-    interactive: false,
-    metadata: { chartType: 'nutrition' }
-  },
-  {
-    id: 'action-timeline-container',
-    moduleId: 'plan',
-    type: 'custom',
-    title: 'График на Действията',
-    visible: true,
-    order: 2,
-    comments: [],
-    interactive: false,
-    metadata: { icon: 'Activity' }
-  },
-  {
     id: 'general-recommendations-container',
     moduleId: 'plan',
     type: 'collapsible',
     title: 'Общи Препоръки',
     visible: true,
-    order: 3,
+    order: 0,
     comments: [],
     interactive: true,
     metadata: { icon: 'Lightbulb' }
@@ -98,7 +65,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'collapsible',
     title: 'Хранителни Препоръки',
     visible: true,
-    order: 4,
+    order: 1,
     comments: [],
     interactive: true,
     metadata: { icon: 'AppleLogo' }
@@ -109,7 +76,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'collapsible',
     title: 'Хранителни Добавки',
     visible: true,
-    order: 5,
+    order: 2,
     comments: [],
     interactive: true,
     metadata: { icon: 'Pill' }
@@ -120,7 +87,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'collapsible',
     title: 'Психологически Препоръки',
     visible: true,
-    order: 6,
+    order: 3,
     comments: [],
     interactive: true,
     metadata: { icon: 'Brain' }
@@ -131,7 +98,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'collapsible',
     title: 'Специални Препоръки',
     visible: true,
-    order: 7,
+    order: 4,
     comments: [],
     interactive: true,
     metadata: { icon: 'Heart' }
@@ -142,7 +109,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'collapsible',
     title: 'Препоръчителни Изследвания',
     visible: true,
-    order: 8,
+    order: 5,
     comments: [],
     interactive: true,
     metadata: { icon: 'Flask' }
@@ -281,50 +248,6 @@ export default function PlanTabEditable({ report }: PlanTabEditableProps) {
 
   const renderContainerContent = (container: ReportContainer) => {
     switch (container.id) {
-      case 'motivational-summary-container':
-        if (!motivationalSummary) return null
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="p-5 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg"
-          >
-            <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
-              <Lightbulb size={20} weight="duotone" className="text-primary" />
-              План за Действие
-            </h3>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {motivationalSummary}
-            </p>
-          </motion.div>
-        )
-      
-      case 'nutrition-chart-container':
-        const hasFoodRecs = (detailedPlan.recommendedFoods && detailedPlan.recommendedFoods.length > 0) || 
-                            (detailedPlan.avoidFoods && detailedPlan.avoidFoods.length > 0)
-        if (!hasFoodRecs) return null
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.05 }}
-          >
-            <NutritionChart report={report} />
-          </motion.div>
-        )
-      
-      case 'action-timeline-container':
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <ActionTimeline report={report} />
-          </motion.div>
-        )
-      
       case 'general-recommendations-container':
         const hasGeneralRecs = detailedPlan.generalRecommendations && detailedPlan.generalRecommendations.length > 0
         if (!hasGeneralRecs) return null

@@ -58,23 +58,12 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     metadata: { chartType: 'pie' }
   },
   {
-    id: 'detailed-analysis-container',
-    moduleId: 'iridology',
-    type: 'collapsible',
-    title: 'Детайлен Иридологичен Анализ',
-    visible: true,
-    order: 1,
-    comments: [],
-    interactive: true,
-    metadata: { icon: 'Activity' }
-  },
-  {
     id: 'zone-stats-container',
     moduleId: 'iridology',
     type: 'card',
     title: 'Статистика на Зоните',
     visible: true,
-    order: 2,
+    order: 1,
     comments: [],
     interactive: false,
     metadata: { icon: 'Activity' }
@@ -85,7 +74,7 @@ const DEFAULT_CONTAINERS: ReportContainer[] = [
     type: 'custom',
     title: 'Визуализация на Ирисите',
     visible: true,
-    order: 3,
+    order: 2,
     comments: [],
     interactive: true,
     metadata: { icon: 'Eye' }
@@ -254,55 +243,6 @@ export default function IridologyTabEditable({ report }: IridologyTabEditablePro
             transition={{ duration: 0.3 }}
           >
             <ZoneStatusPieChart leftIris={report.leftIris} rightIris={report.rightIris} />
-          </motion.div>
-        )
-      
-      case 'detailed-analysis-container':
-        if (!report.detailedAnalysis) return null
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Collapsible open={expandedAnalysis} onOpenChange={setExpandedAnalysis}>
-              <CollapsibleTrigger className="w-full p-5 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Activity size={20} weight="duotone" className="text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-base">Детайлен Иридологичен Анализ</h3>
-                    <p className="text-xs text-muted-foreground">Пълно обяснение на находките</p>
-                  </div>
-                </div>
-                <motion.div
-                  animate={{ rotate: expandedAnalysis ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Warning size={18} className="text-muted-foreground" />
-                </motion.div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 space-y-3">
-                  {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
-                    const cleanParagraph = paragraph.trim()
-                    return cleanParagraph ? (
-                      <motion.div 
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.25 }}
-                        className="flex items-start gap-3 p-4 bg-muted/30 rounded-xl"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        <p className="text-sm leading-relaxed text-foreground/90">{cleanParagraph}</p>
-                      </motion.div>
-                    ) : null
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
           </motion.div>
         )
       

@@ -190,32 +190,7 @@ export function EditableCard({
 
   const isEditorMode = editorMode && editorConfig?.enabled
 
-  if (!currentState.visible && isEditorMode) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 0.4, height: 'auto' }}
-        exit={{ opacity: 0, height: 0 }}
-        className={cn('relative border-2 border-dashed border-muted-foreground/30 rounded-lg p-6', className)}
-      >
-        <div className="flex items-center justify-center gap-2 text-muted-foreground">
-          <span className="text-sm font-medium">Картата е скрита</span>
-        </div>
-        {isEditorMode && (
-          <CardEditorToolbar
-            cardId={cardId}
-            cardState={currentState}
-            onUpdate={handleUpdate}
-            onDelete={onDelete}
-            compact={compact}
-            position={position}
-          />
-        )}
-      </motion.div>
-    )
-  }
-
-  if (!currentState.visible) {
+  if (!currentState.visible && !isEditorMode) {
     return null
   }
 
@@ -241,8 +216,14 @@ export function EditableCard({
         
         <Card className={cn(
           'transition-all duration-200',
-          isEditorMode && 'ring-2 ring-primary/20 hover:ring-primary/40'
+          isEditorMode && 'ring-2 ring-primary/20 hover:ring-primary/40',
+          !currentState.visible && isEditorMode && 'opacity-50'
         )}>
+          {!currentState.visible && isEditorMode && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+              <span className="text-sm font-medium text-muted-foreground">Картата е скрита</span>
+            </div>
+          )}
           {children}
         </Card>
       </motion.div>

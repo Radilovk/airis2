@@ -301,8 +301,7 @@ export default function EditableContainer({
         )}
 
         <div className={cn(
-          editorMode && "pt-6",
-          !container.visible && "pointer-events-none"
+          editorMode && "pt-6"
         )}>
           {!container.visible && editorMode && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-[2px] z-10 rounded-lg">

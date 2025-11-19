@@ -434,15 +434,6 @@ export default function OverviewTabWithEditor({ report, avgHealth, editorMode = 
           />
         </CardContent>
       </EditableCard>
-
-      <EditableCard cardId="overview-health-progress" editorMode={editorMode}>
-        <CardHeader>
-          <CardTitle className="text-lg">Очакван Прогрес</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HealthProgressChart report={report} />
-        </CardContent>
-      </EditableCard>
     </div>
   )
 }
