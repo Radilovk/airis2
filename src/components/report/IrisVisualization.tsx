@@ -23,11 +23,18 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
   const radius = 150
   const centerX = 200
   const centerY = 200
+  const pupilRadius = radius * 0.25
+  const innerRingStart = pupilRadius
+  const innerRingEnd = radius * 0.33
+  const middleRingStart = innerRingEnd
+  const middleRingEnd = radius * 0.83
+  const outerRingStart = middleRingEnd
+  const outerRingEnd = radius
 
   const getColorForStatus = (status: 'normal' | 'attention' | 'concern') => {
     const colors = {
-      normal: 'rgba(34, 197, 94, 0.2)',
-      attention: 'rgba(234, 179, 8, 0.3)',
+      normal: 'rgba(16, 185, 129, 0.15)',
+      attention: 'rgba(245, 158, 11, 0.25)',
       concern: 'rgba(239, 68, 68, 0.3)'
     }
     return colors[status]
@@ -35,8 +42,8 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
 
   const getStrokeForStatus = (status: 'normal' | 'attention' | 'concern') => {
     const colors = {
-      normal: 'rgba(34, 197, 94, 0.6)',
-      attention: 'rgba(234, 179, 8, 0.8)',
+      normal: 'rgba(16, 185, 129, 0.5)',
+      attention: 'rgba(245, 158, 11, 0.7)',
       concern: 'rgba(239, 68, 68, 0.8)'
     }
     return colors[status]
@@ -86,42 +93,101 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
             height="400" 
             viewBox="0 0 400 400" 
             className="max-w-full"
+            style={{ background: 'radial-gradient(circle at center, rgba(30, 41, 59, 0.05) 0%, rgba(15, 23, 42, 0.02) 100%)' }}
           >
+            <defs>
+              <radialGradient id="pupilGradient" cx="50%" cy="50%">
+                <stop offset="0%" stopColor="rgba(15, 23, 42, 0.9)" />
+                <stop offset="100%" stopColor="rgba(30, 41, 59, 0.7)" />
+              </radialGradient>
+              <linearGradient id="ringGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="rgba(59, 130, 246, 0.3)" />
+                <stop offset="50%" stopColor="rgba(99, 102, 241, 0.3)" />
+                <stop offset="100%" stopColor="rgba(139, 92, 246, 0.3)" />
+              </linearGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
             <circle
               cx={centerX}
               cy={centerY}
-              r={radius}
-              fill="rgba(100, 116, 139, 0.05)"
-              stroke="rgba(100, 116, 139, 0.2)"
+              r={radius + 5}
+              fill="none"
+              stroke="url(#ringGlow)"
+              strokeWidth="1"
+              opacity="0.3"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={innerRingEnd}
+              fill="none"
+              stroke="rgba(59, 130, 246, 0.4)"
               strokeWidth="2"
+              strokeDasharray="4,2"
+              filter="url(#glow)"
             />
 
             <circle
               cx={centerX}
               cy={centerY}
-              r={radius * 0.4}
+              r={middleRingStart}
               fill="none"
-              stroke="rgba(100, 116, 139, 0.15)"
-              strokeWidth="1"
-              strokeDasharray="4,4"
+              stroke="rgba(99, 102, 241, 0.5)"
+              strokeWidth="3"
+              filter="url(#glow)"
             />
 
             <circle
               cx={centerX}
               cy={centerY}
-              r={radius * 0.7}
+              r={middleRingEnd}
               fill="none"
-              stroke="rgba(100, 116, 139, 0.15)"
-              strokeWidth="1"
-              strokeDasharray="4,4"
+              stroke="rgba(139, 92, 246, 0.5)"
+              strokeWidth="3"
+              filter="url(#glow)"
             />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={outerRingStart}
+              fill="none"
+              stroke="rgba(168, 85, 247, 0.4)"
+              strokeWidth="2"
+              strokeDasharray="4,2"
+              filter="url(#glow)"
+            />
+
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
+              const outer = polarToCartesian(centerX, centerY, radius, angle)
+              const inner = polarToCartesian(centerX, centerY, pupilRadius, angle)
+              return (
+                <line
+                  key={`radial-${angle}`}
+                  x1={inner.x}
+                  y1={inner.y}
+                  x2={outer.x}
+                  y2={outer.y}
+                  stroke="rgba(100, 116, 139, 0.15)"
+                  strokeWidth="1"
+                />
+              )
+            })}
 
             {(analysis.zones || []).map((zone, index) => {
               if (!zone) return null
               const startAngle = zone.angle?.[0] ?? 0
               const endAngle = zone.angle?.[1] ?? 30
               const midAngle = (startAngle + endAngle) / 2
-              const labelPos = polarToCartesian(centerX, centerY, radius * 0.85, midAngle)
+              const labelPos = polarToCartesian(centerX, centerY, radius * 0.9, midAngle)
               
               return (
                 <g key={`${zone.id}-${index}`}>
@@ -130,11 +196,12 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
                     fill={getColorForStatus(zone.status)}
                     stroke={getStrokeForStatus(zone.status)}
                     strokeWidth={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 3 : zone.status === 'normal' ? 1 : 2}
-                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 0.8}
+                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.4 : 0.8}
                     className="cursor-pointer transition-all"
                     onMouseEnter={() => setHoveredZone(zone)}
                     onMouseLeave={() => setHoveredZone(null)}
                     onClick={() => setSelectedZone(zone)}
+                    filter={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 'url(#glow)' : undefined}
                   />
                   <text
                     x={labelPos.x}
@@ -142,10 +209,11 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill="currentColor"
-                    fontSize="12"
-                    fontWeight="600"
-                    className="pointer-events-none"
-                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.3 : 1}
+                    fontSize="11"
+                    fontWeight="700"
+                    className="pointer-events-none font-mono"
+                    opacity={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 1 : zone.status === 'normal' ? 0.4 : 0.9}
+                    filter={(hoveredZone?.id === zone.id || selectedZone?.id === zone.id) ? 'url(#glow)' : undefined}
                   >
                     {zone.id}
                   </text>
@@ -156,10 +224,11 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
             <circle
               cx={centerX}
               cy={centerY}
-              r={radius * 0.25}
-              fill="rgba(100, 116, 139, 0.1)"
-              stroke="rgba(100, 116, 139, 0.3)"
-              strokeWidth="1"
+              r={pupilRadius}
+              fill="url(#pupilGradient)"
+              stroke="rgba(59, 130, 246, 0.6)"
+              strokeWidth="2"
+              filter="url(#glow)"
             />
 
             <text
@@ -167,32 +236,34 @@ export default function IrisVisualization({ analysis, side = 'left' }: IrisVisua
               y={centerY}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="currentColor"
+              fill="rgba(255, 255, 255, 0.9)"
               fontSize="32"
               fontWeight="700"
               className="font-mono"
+              filter="url(#glow)"
             >
               {analysis.overallHealth || 0}
             </text>
 
-            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
-              const outer = polarToCartesian(centerX, centerY, radius, angle)
-              const inner = polarToCartesian(centerX, centerY, radius - 10, angle)
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+              const tickStart = polarToCartesian(centerX, centerY, radius - 5, angle)
+              const tickEnd = polarToCartesian(centerX, centerY, radius + 5, angle)
               return (
                 <line
-                  key={angle}
-                  x1={inner.x}
-                  y1={inner.y}
-                  x2={outer.x}
-                  y2={outer.y}
-                  stroke="rgba(100, 116, 139, 0.2)"
-                  strokeWidth="1"
+                  key={`tick-${angle}`}
+                  x1={tickStart.x}
+                  y1={tickStart.y}
+                  x2={tickEnd.x}
+                  y2={tickEnd.y}
+                  stroke="rgba(99, 102, 241, 0.5)"
+                  strokeWidth="2"
+                  filter="url(#glow)"
                 />
               )
             })}
           </svg>
           <div className="text-center mt-4 text-sm font-medium text-muted-foreground">
-            Посочете зона за детайли
+            Интерактивна топографска карта • Посочете зона за детайли
           </div>
         </div>
 

@@ -83,8 +83,8 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
 
   const handleExport = async () => {
     try {
-      const { generateReportHTML } = await import('@/lib/html-export')
-      const htmlContent = generateReportHTML(report)
+      const { generateComprehensiveReportHTML } = await import('@/lib/html-export-comprehensive')
+      const htmlContent = generateComprehensiveReportHTML(report)
       
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
@@ -96,7 +96,7 @@ export default function ReportScreen({ report, onRestart }: ReportScreenProps) {
       printWindow.document.close()
       
       toast.success('Докладът е отворен в нов прозорец', {
-        description: 'Може да го запазите като PDF или да го принтирате'
+        description: 'Интерактивен доклад с пълна визуализация - можете да го запазите като PDF'
       })
     } catch (error) {
       console.error('Error generating export:', error)

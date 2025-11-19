@@ -58,101 +58,151 @@ export default function IridologyTab({ report }: IridologyTabProps) {
 
   return (
     <div className="space-y-4">
-      {report.detailedAnalysis && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Collapsible open={expandedAnalysis} onOpenChange={setExpandedAnalysis}>
-            <Card className="overflow-hidden">
-              <CollapsibleTrigger className="w-full p-5 flex items-center justify-between hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Activity size={20} weight="duotone" className="text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="font-semibold text-base">Детайлен Иридологичен Анализ</h3>
-                    <p className="text-xs text-muted-foreground">Пълно обяснение на находките</p>
-                  </div>
-                </div>
-                <motion.div
-                  animate={{ rotate: expandedAnalysis ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Warning size={18} className="text-muted-foreground" />
-                </motion.div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-5 pb-5 space-y-3">
-                  {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
-                    const cleanParagraph = paragraph.trim()
-                    return cleanParagraph ? (
-                      <motion.div 
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.25 }}
-                        className="flex items-start gap-3 p-4 bg-muted/30 rounded-xl"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                        <p className="text-sm leading-relaxed text-foreground/90">{cleanParagraph}</p>
-                      </motion.div>
-                    ) : null
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        </motion.div>
-      )}
-      
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-4 bg-gradient-to-br from-green-50/50 to-green-100/30">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck size={18} weight="duotone" className="text-green-600" />
-            <span className="text-xs font-semibold text-green-700">Здрави Зони</span>
-          </div>
-          <p className="text-2xl font-bold text-green-700">{leftStats.normal + rightStats.normal}</p>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+          <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+              <Eye size={24} weight="duotone" className="text-primary-foreground" />
+            </div>
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Иридологичен Анализ
+            </span>
+          </h2>
         </Card>
-        
-        <Card className="p-4 bg-gradient-to-br from-yellow-50/50 to-yellow-100/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Info size={18} weight="duotone" className="text-yellow-600" />
-            <span className="text-xs font-semibold text-yellow-700">Внимание</span>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.05 }}
+      >
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+            <Activity size={20} weight="duotone" />
+            Обща Оценка
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye size={18} weight="duotone" className="text-blue-600" />
+                <span className="text-xs font-semibold text-blue-700">Ляв Ирис</span>
+              </div>
+              <p className="text-3xl font-bold text-blue-700">{report.leftIris.overallHealth}</p>
+              <p className="text-xs text-blue-600 mt-1">Общо здраве</p>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye size={18} weight="duotone" className="text-purple-600" />
+                <span className="text-xs font-semibold text-purple-700">Десен Ирис</span>
+              </div>
+              <p className="text-3xl font-bold text-purple-700">{report.rightIris.overallHealth}</p>
+              <p className="text-xs text-purple-600 mt-1">Общо здраве</p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-yellow-700">{leftStats.attention + rightStats.attention}</p>
         </Card>
-        
-        <Card className="p-4 bg-gradient-to-br from-orange-50/50 to-orange-100/30">
-          <div className="flex items-center gap-2 mb-2">
-            <SealWarning size={18} weight="duotone" className="text-orange-600" />
-            <span className="text-xs font-semibold text-orange-700">Притеснение</span>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+      >
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+            <SealWarning size={20} weight="duotone" />
+            Най-важни Находки
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 bg-gradient-to-br from-green-50/50 to-green-100/30 rounded-xl border border-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldCheck size={18} weight="duotone" className="text-green-600" />
+                <span className="text-xs font-semibold text-green-700">Здрави Зони</span>
+              </div>
+              <p className="text-2xl font-bold text-green-700">{leftStats.normal + rightStats.normal}</p>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-yellow-50/50 to-yellow-100/30 rounded-xl border border-yellow-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Info size={18} weight="duotone" className="text-yellow-600" />
+                <span className="text-xs font-semibold text-yellow-700">Внимание</span>
+              </div>
+              <p className="text-2xl font-bold text-yellow-700">{leftStats.attention + rightStats.attention}</p>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-orange-50/50 to-orange-100/30 rounded-xl border border-orange-200">
+              <div className="flex items-center gap-2 mb-2">
+                <SealWarning size={18} weight="duotone" className="text-orange-600" />
+                <span className="text-xs font-semibold text-orange-700">Притеснение</span>
+              </div>
+              <p className="text-2xl font-bold text-orange-700">{leftStats.concern + rightStats.concern}</p>
+            </div>
+            
+            <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/20 rounded-xl border border-primary/30">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye size={18} weight="duotone" className="text-primary" />
+                <span className="text-xs font-semibold text-primary">Общо Зони</span>
+              </div>
+              <p className="text-2xl font-bold text-primary">{leftStats.total + rightStats.total}</p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-orange-700">{leftStats.concern + rightStats.concern}</p>
         </Card>
-        
-        <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/20">
-          <div className="flex items-center gap-2 mb-2">
-            <Eye size={18} weight="duotone" className="text-primary" />
-            <span className="text-xs font-semibold text-primary">Общо Зони</span>
-          </div>
-          <p className="text-2xl font-bold text-primary">{leftStats.total + rightStats.total}</p>
-        </Card>
-      </div>
+      </motion.div>
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
       >
-        <DualIrisTopographicMap
-          leftIris={report.leftIris}
-          rightIris={report.rightIris}
-          leftImageUrl={report.leftIrisImage.dataUrl}
-          rightImageUrl={report.rightIrisImage.dataUrl}
-        />
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+            <Eye size={20} weight="duotone" />
+            Интерактивна Топографска Карта
+          </h3>
+          <DualIrisTopographicMap
+            leftIris={report.leftIris}
+            rightIris={report.rightIris}
+            leftImageUrl={report.leftIrisImage.dataUrl}
+            rightImageUrl={report.rightIrisImage.dataUrl}
+          />
+        </Card>
       </motion.div>
+
+      {report.detailedAnalysis && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+        >
+          <Card className="p-6 border-2 border-primary/10">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-primary">
+              <Activity size={20} weight="duotone" />
+              Връзка с Целите и Прогноза
+            </h3>
+            <div className="space-y-3">
+              {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
+                const cleanParagraph = paragraph.trim()
+                return cleanParagraph ? (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.25 }}
+                    className="flex items-start gap-3 p-4 bg-gradient-to-r from-primary/5 to-primary/0 rounded-xl border border-primary/10"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
+                    <p className="text-sm leading-relaxed text-foreground/90">{cleanParagraph}</p>
+                  </motion.div>
+                ) : null
+              })}
+            </div>
+          </Card>
+        </motion.div>
+      )}
       
       <Tabs defaultValue="left" className="w-full">
         <TabsList className="grid w-full grid-cols-2 h-auto p-1.5 bg-muted/50">
@@ -342,44 +392,6 @@ export default function IridologyTab({ report }: IridologyTabProps) {
           )}
         </TabsContent>
       </Tabs>
-
-      {report.detailedAnalysis && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-        >
-          <Card className="p-6 border-2">
-            <h3 className="font-bold text-lg mb-5 flex items-center gap-3 pb-3 border-b-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                <Eye size={22} weight="duotone" className="text-primary-foreground" />
-              </div>
-              <span>Детайлен Иридологичен Анализ</span>
-            </h3>
-            <div className="space-y-4">
-              {report.detailedAnalysis.split(/\n\n+/).filter(p => p.trim()).map((paragraph, idx) => {
-                const cleanParagraph = paragraph.trim()
-                if (!cleanParagraph) return null
-                
-                return (
-                  <motion.div 
-                    key={idx}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3 }}
-                    className="flex items-start gap-3 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl border"
-                  >
-                    <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0 shadow-sm" />
-                    <p className="text-sm leading-relaxed text-foreground/90 flex-1">
-                      {cleanParagraph}
-                    </p>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </Card>
-        </motion.div>
-      )}
     </div>
   )
 }
