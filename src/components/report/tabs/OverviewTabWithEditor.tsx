@@ -259,199 +259,189 @@ export default function OverviewTabWithEditor({ report, avgHealth, editorMode = 
 
       <EditableCard cardId="overview-biometric" editorMode={editorMode}>
         <Collapsible open={expandedBio} onOpenChange={setExpandedBio}>
-          <Card>
-            <CollapsibleTrigger className="w-full">
-              <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Биометрични Данни</CardTitle>
-                  <CaretDown
-                    size={20}
-                    className={`transition-transform ${expandedBio ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Възраст</p>
-                  <p className="text-xl font-semibold">{report.questionnaireData.age} год.</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Пол</p>
-                  <p className="text-xl font-semibold">{report.questionnaireData.gender === 'male' ? 'Мъж' : 'Жена'}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Тегло</p>
-                  <p className="text-xl font-semibold">{report.questionnaireData.weight} кг</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Ръст</p>
-                  <p className="text-xl font-semibold">{report.questionnaireData.height} см</p>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Биометрични Данни</CardTitle>
+                <CaretDown
+                  size={20}
+                  className={`transition-transform ${expandedBio ? 'rotate-180' : ''}`}
+                />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Възраст</p>
+                <p className="text-xl font-semibold">{report.questionnaireData.age} год.</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Пол</p>
+                <p className="text-xl font-semibold">{report.questionnaireData.gender === 'male' ? 'Мъж' : 'Жена'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Тегло</p>
+                <p className="text-xl font-semibold">{report.questionnaireData.weight} кг</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Ръст</p>
+                <p className="text-xl font-semibold">{report.questionnaireData.height} см</p>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
         </Collapsible>
       </EditableCard>
 
       <EditableCard cardId="overview-lifestyle" editorMode={editorMode}>
         <Collapsible open={expandedLifestyle} onOpenChange={setExpandedLifestyle}>
-          <Card>
-            <CollapsibleTrigger className="w-full">
-              <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <Target size={20} weight="duotone" className="text-accent" />
-                    </div>
-                    Начин на Живот
-                  </CardTitle>
-                  <CaretDown
-                    size={20}
-                    className={`transition-transform ${expandedLifestyle ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {lifestyleMetrics.map((metric, index) => {
-                    const Icon = metric.icon
-                    return (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-start gap-4 p-4 rounded-xl bg-muted/30"
-                      >
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          metric.score === 'good' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
-                        }`}>
-                          <Icon size={24} weight="duotone" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm text-muted-foreground">{metric.label}</p>
-                          <p className="text-lg font-semibold mt-1">{metric.value}</p>
-                          {metric.quality && (
-                            <p className={`text-xs mt-1 ${
-                              metric.score === 'good' ? 'text-green-600' : 'text-amber-600'
-                            }`}>
-                              {metric.quality}
-                            </p>
-                          )}
-                        </div>
-                        {metric.score === 'good' ? (
-                          <CheckCircle size={20} weight="fill" className="text-green-600 flex-shrink-0" />
-                        ) : (
-                          <XCircle size={20} weight="fill" className="text-amber-600 flex-shrink-0" />
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Target size={20} weight="duotone" className="text-accent" />
+                  </div>
+                  Начин на Живот
+                </CardTitle>
+                <CaretDown
+                  size={20}
+                  className={`transition-transform ${expandedLifestyle ? 'rotate-180' : ''}`}
+                />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {lifestyleMetrics.map((metric, index) => {
+                  const Icon = metric.icon
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-start gap-4 p-4 rounded-xl bg-muted/30"
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        metric.score === 'good' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                      }`}>
+                        <Icon size={24} weight="duotone" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-muted-foreground">{metric.label}</p>
+                        <p className="text-lg font-semibold mt-1">{metric.value}</p>
+                        {metric.quality && (
+                          <p className={`text-xs mt-1 ${
+                            metric.score === 'good' ? 'text-green-600' : 'text-amber-600'
+                          }`}>
+                            {metric.quality}
+                          </p>
                         )}
-                      </motion.div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
+                      </div>
+                      {metric.score === 'good' ? (
+                        <CheckCircle size={20} weight="fill" className="text-green-600 flex-shrink-0" />
+                      ) : (
+                        <XCircle size={20} weight="fill" className="text-amber-600 flex-shrink-0" />
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
         </Collapsible>
       </EditableCard>
 
       <EditableCard cardId="overview-goal-analysis" editorMode={editorMode}>
         <Collapsible open={expandedGoalAnalysis} onOpenChange={setExpandedGoalAnalysis}>
-          <Card>
-            <CollapsibleTrigger className="w-full">
-              <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Target size={20} weight="duotone" className="text-primary" />
-                    </div>
-                    Анализ на Постижимост на Цели
-                  </CardTitle>
-                  <CaretDown
-                    size={20}
-                    className={`transition-transform ${expandedGoalAnalysis ? 'rotate-180' : ''}`}
-                  />
+          <CollapsibleTrigger className="w-full">
+            <CardHeader className="cursor-pointer hover:bg-accent/5 transition-colors">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Target size={20} weight="duotone" className="text-primary" />
+                  </div>
+                  Анализ на Постижимост на Цели
+                </CardTitle>
+                <CaretDown
+                  size={20}
+                  className={`transition-transform ${expandedGoalAnalysis ? 'rotate-180' : ''}`}
+                />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-muted-foreground">Текуща постижимост</span>
+                  <span className="text-2xl font-bold">{goalAchievability}%</span>
                 </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-6">
+                <Progress value={goalAchievability} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-2">
+                  {goalAchievability >= 70 ? 'Високи шансове за постигане на здравословните цели' :
+                   goalAchievability >= 50 ? 'Умерени шансове - необходими целенасочени усилия' :
+                   'Предизвикателно - препоръчва се поетапен подход'}
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6 pt-4 border-t">
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-muted-foreground">Текуща постижимост</span>
-                    <span className="text-2xl font-bold">{goalAchievability}%</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendUp size={20} weight="duotone" className="text-green-600" />
+                    <h4 className="font-semibold text-sm">Подкрепящи Фактори</h4>
                   </div>
-                  <Progress value={goalAchievability} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {goalAchievability >= 70 ? 'Високи шансове за постигане на здравословните цели' :
-                     goalAchievability >= 50 ? 'Умерени шансове - необходими целенасочени усилия' :
-                     'Предизвикателно - препоръчва се поетапен подход'}
-                  </p>
+                  <ul className="space-y-2">
+                    {supportingFactors.map((factor, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <CheckCircle size={16} weight="fill" className="text-green-600 flex-shrink-0 mt-0.5" />
+                        <span>{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 pt-4 border-t">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendUp size={20} weight="duotone" className="text-green-600" />
-                      <h4 className="font-semibold text-sm">Подкрепящи Фактори</h4>
-                    </div>
-                    <ul className="space-y-2">
-                      {supportingFactors.map((factor, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <CheckCircle size={16} weight="fill" className="text-green-600 flex-shrink-0 mt-0.5" />
-                          <span>{factor}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendDown size={20} weight="duotone" className="text-amber-600" />
+                    <h4 className="font-semibold text-sm">Ограничаващи Фактори</h4>
                   </div>
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <TrendDown size={20} weight="duotone" className="text-amber-600" />
-                      <h4 className="font-semibold text-sm">Ограничаващи Фактори</h4>
-                    </div>
-                    <ul className="space-y-2">
-                      {limitingFactors.map((factor, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <XCircle size={16} weight="fill" className="text-amber-600 flex-shrink-0 mt-0.5" />
-                          <span>{factor}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <ul className="space-y-2">
+                    {limitingFactors.map((factor, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <XCircle size={16} weight="fill" className="text-amber-600 flex-shrink-0 mt-0.5" />
+                        <span>{factor}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
         </Collapsible>
       </EditableCard>
 
       <EditableCard cardId="overview-system-scores" editorMode={editorMode}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Резултати по Системи</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SystemScoresChart 
-              leftScores={report.leftIris?.systemScores || []} 
-              rightScores={report.rightIris?.systemScores || []} 
-            />
-          </CardContent>
-        </Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Резултати по Системи</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SystemScoresChart 
+            leftScores={report.leftIris?.systemScores || []} 
+            rightScores={report.rightIris?.systemScores || []} 
+          />
+        </CardContent>
       </EditableCard>
 
       <EditableCard cardId="overview-health-progress" editorMode={editorMode}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Очакван Прогрес</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <HealthProgressChart report={report} />
-          </CardContent>
-        </Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Очакван Прогрес</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <HealthProgressChart report={report} />
+        </CardContent>
       </EditableCard>
     </div>
   )

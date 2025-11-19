@@ -288,16 +288,15 @@ export default function PlanTabEditable({ report }: PlanTabEditableProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="p-5 bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg"
           >
-            <Card className="p-5 bg-gradient-to-br from-primary/10 to-accent/10">
-              <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
-                <Lightbulb size={20} weight="duotone" className="text-primary" />
-                План за Действие
-              </h3>
-              <p className="text-sm leading-relaxed text-foreground/90">
-                {motivationalSummary}
-              </p>
-            </Card>
+            <h3 className="font-semibold text-base mb-2 flex items-center gap-2">
+              <Lightbulb size={20} weight="duotone" className="text-primary" />
+              План за Действие
+            </h3>
+            <p className="text-sm leading-relaxed text-foreground/90">
+              {motivationalSummary}
+            </p>
           </motion.div>
         )
       
@@ -447,41 +446,39 @@ function CollapsibleSection({ section }: { section: PlanSection }) {
   
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Icon size={20} weight="duotone" className="text-primary" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-base">{section.title}</h3>
-              <p className="text-xs text-muted-foreground">{section.content.length} препоръки</p>
-            </div>
+      <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors rounded-t-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Icon size={20} weight="duotone" className="text-primary" />
           </div>
-          <motion.div
-            animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <CaretDown size={18} className="text-muted-foreground" />
-          </motion.div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-2">
-            {section.content.map((item, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.25 }}
-                className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg"
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                <p className="text-sm leading-relaxed text-foreground/90">{item}</p>
-              </motion.div>
-            ))}
+          <div className="text-left">
+            <h3 className="font-semibold text-base">{section.title}</h3>
+            <p className="text-xs text-muted-foreground">{section.content.length} препоръки</p>
           </div>
-        </CollapsibleContent>
-      </Card>
+        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <CaretDown size={18} className="text-muted-foreground" />
+        </motion.div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-4 space-y-2">
+          {section.content.map((item, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.05, duration: 0.25 }}
+              className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg"
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+              <p className="text-sm leading-relaxed text-foreground/90">{item}</p>
+            </motion.div>
+          ))}
+        </div>
+      </CollapsibleContent>
     </Collapsible>
   )
 }
@@ -497,76 +494,74 @@ function FoodRecommendationsSection({
   
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-              <AppleLogo size={20} weight="duotone" className="text-green-600" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-base">Хранителни Препоръки</h3>
-              <p className="text-xs text-muted-foreground">
-                {recommendedFoods.length} препоръчани • {avoidFoods.length} за избягване
-              </p>
-            </div>
+      <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors rounded-t-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+            <AppleLogo size={20} weight="duotone" className="text-green-600" />
           </div>
-          <motion.div
-            animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <CaretDown size={18} className="text-muted-foreground" />
-          </motion.div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-4">
-            {recommendedFoods.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle size={16} weight="fill" className="text-green-600" />
-                  <h4 className="text-sm font-semibold text-green-700">Препоръчителни храни</h4>
-                </div>
-                <div className="space-y-2">
-                  {recommendedFoods.map((food, idx) => (
-                    <motion.div 
-                      key={idx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.03, duration: 0.2 }}
-                      className="flex items-start gap-2 p-2 bg-green-50 rounded-lg border border-green-200"
-                    >
-                      <CheckCircle size={14} weight="fill" className="text-green-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-green-900">{food}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {avoidFoods.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <XCircle size={16} weight="fill" className="text-red-600" />
-                  <h4 className="text-sm font-semibold text-red-700">Храни за избягване</h4>
-                </div>
-                <div className="space-y-2">
-                  {avoidFoods.map((food, idx) => (
-                    <motion.div 
-                      key={idx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.03, duration: 0.2 }}
-                      className="flex items-start gap-2 p-2 bg-red-50 rounded-lg border border-red-200"
-                    >
-                      <XCircle size={14} weight="fill" className="text-red-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-red-900">{food}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="text-left">
+            <h3 className="font-semibold text-base">Хранителни Препоръки</h3>
+            <p className="text-xs text-muted-foreground">
+              {recommendedFoods.length} препоръчани • {avoidFoods.length} за избягване
+            </p>
           </div>
-        </CollapsibleContent>
-      </Card>
+        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <CaretDown size={18} className="text-muted-foreground" />
+        </motion.div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-4 space-y-4">
+          {recommendedFoods.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle size={16} weight="fill" className="text-green-600" />
+                <h4 className="text-sm font-semibold text-green-700">Препоръчителни храни</h4>
+              </div>
+              <div className="space-y-2">
+                {recommendedFoods.map((food, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03, duration: 0.2 }}
+                    className="flex items-start gap-2 p-2 bg-green-50 rounded-lg border border-green-200"
+                  >
+                    <CheckCircle size={14} weight="fill" className="text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-green-900">{food}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {avoidFoods.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle size={16} weight="fill" className="text-red-600" />
+                <h4 className="text-sm font-semibold text-red-700">Храни за избягване</h4>
+              </div>
+              <div className="space-y-2">
+                {avoidFoods.map((food, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03, duration: 0.2 }}
+                    className="flex items-start gap-2 p-2 bg-red-50 rounded-lg border border-red-200"
+                  >
+                    <XCircle size={14} weight="fill" className="text-red-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-red-900">{food}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CollapsibleContent>
     </Collapsible>
   )
 }
@@ -576,54 +571,52 @@ function SupplementsSection({ supplements }: { supplements: SupplementRecommenda
   
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden">
-        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Pill size={20} weight="duotone" className="text-blue-600" />
-            </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-base">Хранителни Добавки</h3>
-              <p className="text-xs text-muted-foreground">{supplements.length} добавки</p>
-            </div>
+      <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors rounded-t-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+            <Pill size={20} weight="duotone" className="text-blue-600" />
           </div>
-          <motion.div
-            animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <CaretDown size={18} className="text-muted-foreground" />
-          </motion.div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-3">
-            {supplements.map((supp, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.25 }}
-                className="p-4 bg-blue-50 rounded-lg border border-blue-200"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                    <Pill size={16} weight="fill" className="text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-blue-900 mb-1">{supp.name}</h4>
-                    <div className="space-y-1 text-xs text-blue-800">
-                      <p><span className="font-medium">Дозировка:</span> {supp.dosage}</p>
-                      <p><span className="font-medium">Прием:</span> {supp.timing}</p>
-                      {supp.notes && (
-                        <p className="text-blue-700 italic mt-2">{supp.notes}</p>
-                      )}
-                    </div>
+          <div className="text-left">
+            <h3 className="font-semibold text-base">Хранителни Добавки</h3>
+            <p className="text-xs text-muted-foreground">{supplements.length} добавки</p>
+          </div>
+        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <CaretDown size={18} className="text-muted-foreground" />
+        </motion.div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="px-4 pb-4 space-y-3">
+          {supplements.map((supp, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05, duration: 0.25 }}
+              className="p-4 bg-blue-50 rounded-lg border border-blue-200"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Pill size={16} weight="fill" className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-blue-900 mb-1">{supp.name}</h4>
+                  <div className="space-y-1 text-xs text-blue-800">
+                    <p><span className="font-medium">Дозировка:</span> {supp.dosage}</p>
+                    <p><span className="font-medium">Прием:</span> {supp.timing}</p>
+                    {supp.notes && (
+                      <p className="text-blue-700 italic mt-2">{supp.notes}</p>
+                    )}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Card>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </CollapsibleContent>
     </Collapsible>
   )
 }
