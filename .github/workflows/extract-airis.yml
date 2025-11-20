@@ -1,0 +1,31 @@
+name: Extract Airis project
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run extract script
+        run: |
+          node extract-project.js airis-full-project-export-2025-11-20.json
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Extract Airis project" || echo "Nothing to commit"
+          git push
