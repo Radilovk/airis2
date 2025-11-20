@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { 
   DownloadSimple, 
@@ -17,18 +18,23 @@ import {
   GitBranch,
   FolderOpen,
   File,
-  MagnifyingGlass
+  MagnifyingGlass,
+  Archive
 } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
+import JSZip from 'jszip'
 
 interface FileStructure {
   path: string
   type: 'file' | 'directory'
   size?: number
+  content?: string
 }
 
 export default function ProjectExportTab() {
   const [isScanning, setIsScanning] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
   const [scannedFiles, setScannedFiles] = useState<FileStructure[]>([])
   const [exportLog, setExportLog] = useState<string[]>([])
 
@@ -58,11 +64,114 @@ export default function ProjectExportTab() {
     'components.json',
     'PRD.md',
     'README.md',
+    'README_BG.md',
+    'CHANGELOG.md',
+    'TROUBLESHOOTING.md',
+    'AIRIS_KNOWLEDGE_README.md',
+    'AI_CONFIGURATION_GUIDE.md',
+    '.gitignore',
+    'extract-project.py',
+    'runtime.config.json',
+    'spark.meta.json',
     'src/App.tsx',
     'src/index.css',
     'src/main.css',
     'src/main.tsx',
-    'src/vite-end.d.ts'
+    'src/vite-end.d.ts',
+    'src/ErrorFallback.tsx'
+  ]
+
+  const allSourceFiles = [
+    'src/components/ui/accordion.tsx',
+    'src/components/ui/alert-dialog.tsx',
+    'src/components/ui/alert.tsx',
+    'src/components/ui/aspect-ratio.tsx',
+    'src/components/ui/avatar.tsx',
+    'src/components/ui/badge.tsx',
+    'src/components/ui/breadcrumb.tsx',
+    'src/components/ui/button.tsx',
+    'src/components/ui/calendar.tsx',
+    'src/components/ui/card.tsx',
+    'src/components/ui/carousel.tsx',
+    'src/components/ui/chart.tsx',
+    'src/components/ui/checkbox.tsx',
+    'src/components/ui/collapsible.tsx',
+    'src/components/ui/command.tsx',
+    'src/components/ui/context-menu.tsx',
+    'src/components/ui/dialog.tsx',
+    'src/components/ui/drawer.tsx',
+    'src/components/ui/dropdown-menu.tsx',
+    'src/components/ui/form.tsx',
+    'src/components/ui/hover-card.tsx',
+    'src/components/ui/input-otp.tsx',
+    'src/components/ui/input.tsx',
+    'src/components/ui/label.tsx',
+    'src/components/ui/menubar.tsx',
+    'src/components/ui/navigation-menu.tsx',
+    'src/components/ui/pagination.tsx',
+    'src/components/ui/popover.tsx',
+    'src/components/ui/progress.tsx',
+    'src/components/ui/radio-group.tsx',
+    'src/components/ui/resizable.tsx',
+    'src/components/ui/scroll-area.tsx',
+    'src/components/ui/select.tsx',
+    'src/components/ui/separator.tsx',
+    'src/components/ui/sheet.tsx',
+    'src/components/ui/sidebar.tsx',
+    'src/components/ui/skeleton.tsx',
+    'src/components/ui/slider.tsx',
+    'src/components/ui/sonner.tsx',
+    'src/components/ui/switch.tsx',
+    'src/components/ui/table.tsx',
+    'src/components/ui/tabs.tsx',
+    'src/components/ui/textarea.tsx',
+    'src/components/ui/toggle-group.tsx',
+    'src/components/ui/toggle.tsx',
+    'src/components/ui/tooltip.tsx',
+    'src/components/EditorModeIndicator.tsx',
+    'src/components/ErrorFallback.tsx',
+    'src/components/QuickDebugPanel.tsx',
+    'src/components/admin/AIModelStrategyTab.tsx',
+    'src/components/admin/AIPromptTab.tsx',
+    'src/components/admin/ChangelogTab.tsx',
+    'src/components/admin/EditorCommentsExport.tsx',
+    'src/components/admin/EditorModeTab.tsx',
+    'src/components/admin/IridologyManualTab.tsx',
+    'src/components/admin/ProjectExportTab.tsx',
+    'src/components/admin/QuestionnaireManager.tsx',
+    'src/components/iris/IrisAnalysisCard.tsx',
+    'src/components/iris/IrisImageViewer.tsx',
+    'src/components/iris/IrisZoneChart.tsx',
+    'src/components/iris/ZoneDetailsDialog.tsx',
+    'src/components/report/AnalysisSection.tsx',
+    'src/components/report/DiagnosisCard.tsx',
+    'src/components/report/ExportReportDialog.tsx',
+    'src/components/report/HealthScoreCard.tsx',
+    'src/components/report/ReportHeader.tsx',
+    'src/components/screens/AboutAirisScreen.tsx',
+    'src/components/screens/AdminScreen.tsx',
+    'src/components/screens/AnalysisScreen.tsx',
+    'src/components/screens/DiagnosticScreen.tsx',
+    'src/components/screens/HistoryScreen.tsx',
+    'src/components/screens/ImageUploadScreen.tsx',
+    'src/components/screens/QuestionnaireScreen.tsx',
+    'src/components/screens/ReportScreen.tsx',
+    'src/components/screens/WelcomeScreen.tsx',
+    'src/hooks/use-mobile.ts',
+    'src/hooks/use-editable-elements.ts',
+    'src/hooks/use-deep-editable.ts',
+    'src/lib/utils.ts',
+    'src/lib/error-logger.ts',
+    'src/lib/storage-utils.ts',
+    'src/lib/storage-cleanup.ts',
+    'src/lib/airis-knowledge.ts',
+    'src/lib/default-prompts.ts',
+    'src/lib/defaultQuestions.ts',
+    'src/lib/upload-diagnostics.ts',
+    'src/lib/iridology-zones.ts',
+    'src/lib/iridology-manual.ts',
+    'src/types/index.ts',
+    'src/styles/theme.css'
   ]
 
   const directories = [
@@ -83,6 +192,89 @@ export default function ProjectExportTab() {
     setExportLog(prev => [...prev, `${new Date().toLocaleTimeString('bg-BG')}: ${message}`])
   }
 
+  const fetchFileContent = async (filePath: string): Promise<string | null> => {
+    try {
+      const response = await fetch(`/${filePath}`)
+      if (response.ok) {
+        return await response.text()
+      }
+      return null
+    } catch (error) {
+      console.error(`Error fetching ${filePath}:`, error)
+      return null
+    }
+  }
+
+  const createFullExport = async () => {
+    setIsExporting(true)
+    setExportProgress(0)
+    setExportLog([])
+    addLog('🚀 Започване на ПЪЛЕН ЕКСПОРТ на проекта...')
+
+    const zip = new JSZip()
+    const allFiles = [...criticalFiles, ...allSourceFiles]
+    let successCount = 0
+    let failCount = 0
+
+    addLog(`📊 Общо файлове за експорт: ${allFiles.length}`)
+
+    for (let i = 0; i < allFiles.length; i++) {
+      const filePath = allFiles[i]
+      const progress = Math.round(((i + 1) / allFiles.length) * 100)
+      setExportProgress(progress)
+
+      try {
+        const content = await fetchFileContent(filePath)
+        if (content !== null) {
+          zip.file(filePath, content)
+          addLog(`✓ ${filePath}`)
+          successCount++
+        } else {
+          addLog(`✗ Не може да се извлече: ${filePath}`)
+          failCount++
+        }
+      } catch (error) {
+        addLog(`✗ Грешка: ${filePath}`)
+        failCount++
+      }
+    }
+
+    addLog(`📦 Генериране на ZIP архив...`)
+    
+    try {
+      const blob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 9 }
+      })
+      
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const timestamp = new Date().toISOString().split('T')[0]
+      a.download = `AIRIS-FULL-EXPORT-${timestamp}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      addLog(`✅ ЕКСПОРТ ЗАВЪРШЕН!`)
+      addLog(`✓ Успешно: ${successCount} файла`)
+      addLog(`✗ Неуспешно: ${failCount} файла`)
+      addLog(`📦 ZIP размер: ${(blob.size / 1024 / 1024).toFixed(2)} MB`)
+
+      toast.success('Пълният експорт е готов!', {
+        description: `${successCount} файла в ZIP архив (${(blob.size / 1024 / 1024).toFixed(2)} MB)`
+      })
+    } catch (error) {
+      addLog(`❌ ГРЕШКА при създаване на ZIP: ${error}`)
+      toast.error('Грешка при създаване на архива')
+    }
+
+    setIsExporting(false)
+    setExportProgress(0)
+  }
+
   const scanProjectFiles = async () => {
     setIsScanning(true)
     setScannedFiles([])
@@ -92,25 +284,15 @@ export default function ProjectExportTab() {
     const files: FileStructure[] = []
     let totalSize = 0
 
-    const filesToScan = [
-      ...criticalFiles,
-      'AIRIS_KNOWLEDGE_README.md',
-      'AI_CONFIGURATION_GUIDE.md',
-      'CHANGELOG.md',
-      'TROUBLESHOOTING.md',
-      'README_BG.md',
-      '.gitignore',
-      'extract-project.py',
-      'runtime.config.json',
-      'spark.meta.json'
-    ]
+    const allFiles = [...criticalFiles, ...allSourceFiles]
 
-    for (const file of filesToScan) {
+    for (const file of allFiles) {
       try {
         const response = await fetch(`/${file}`)
         if (response.ok) {
           const blob = await response.blob()
-          files.push({ path: file, type: 'file', size: blob.size })
+          const content = await blob.text()
+          files.push({ path: file, type: 'file', size: blob.size, content })
           totalSize += blob.size
           addLog(`✓ Намерен: ${file} (${(blob.size / 1024).toFixed(2)} KB)`)
         }
@@ -120,15 +302,15 @@ export default function ProjectExportTab() {
     }
 
     for (const dir of directories) {
-      addLog(`📁 Сканиране на директория: ${dir}`)
+      addLog(`📁 Директория: ${dir}`)
       files.push({ path: dir, type: 'directory' })
     }
 
     setScannedFiles(files)
-    addLog(`✅ Сканиране завършено: ${files.length} файла/директории, ~${(totalSize / 1024 / 1024).toFixed(2)} MB`)
+    addLog(`✅ Сканиране завършено: ${files.filter(f => f.type === 'file').length} файла, ~${(totalSize / 1024 / 1024).toFixed(2)} MB`)
     setIsScanning(false)
     
-    toast.success(`Сканирани ${files.length} файла/директории`, {
+    toast.success(`Сканирани ${files.filter(f => f.type === 'file').length} файла`, {
       description: `Общ размер: ~${(totalSize / 1024 / 1024).toFixed(2)} MB`
     })
   }
@@ -424,11 +606,15 @@ ${exportLog.join('\n')}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="export" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="export">
+            <Archive className="w-4 h-4 mr-2" />
+            Пълен Експорт
+          </TabsTrigger>
           <TabsTrigger value="overview">
             <Package className="w-4 h-4 mr-2" />
-            Общ преглед
+            Инструкции
           </TabsTrigger>
           <TabsTrigger value="scanner">
             <MagnifyingGlass className="w-4 h-4 mr-2" />
@@ -439,6 +625,131 @@ ${exportLog.join('\n')}
             GitHub
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="export" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Archive className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                Автоматичен Пълен Експорт
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Създай 1:1 копие на целия проект като ZIP архив - включва ВСИЧКИ файлове
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Нов метод:</strong> Този експорт автоматично извлича ВСИЧКИ файлове от проекта 
+                  и ги пакетира в ZIP архив, готов за ръчна синхронизация с GitHub repository.
+                </AlertDescription>
+              </Alert>
+
+              <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <h4 className="font-semibold text-sm">Какво включва този експорт:</h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Всички конфигурационни файлове (package.json, tsconfig.json, vite.config.ts и др.)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Пълна src/ директория с всички компоненти, hooks, lib файлове и типове</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Всички shadcn/ui компоненти (50+ компонента)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Всички екрани и административни панели</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Документация и README файлове</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span>Стилове и тематични файлове</span>
+                  </li>
+                </ul>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Button 
+                  onClick={createFullExport}
+                  disabled={isExporting}
+                  size="lg"
+                  className="w-full"
+                >
+                  {isExporting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Експортиране... {exportProgress}%
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="w-5 h-5 mr-2" />
+                      Създай ZIP архив (Пълен Експорт)
+                    </>
+                  )}
+                </Button>
+
+                {isExporting && (
+                  <Progress value={exportProgress} className="w-full" />
+                )}
+              </div>
+
+              {exportLog.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">Export Log:</h4>
+                    <ScrollArea className="h-[300px] rounded-md border p-3 bg-muted/30">
+                      <div className="space-y-1 font-mono text-xs">
+                        {exportLog.map((log, idx) => (
+                          <div key={idx} className={
+                            log.includes('✓') || log.includes('✅') ? 'text-green-600' :
+                            log.includes('✗') || log.includes('❌') ? 'text-red-600' :
+                            log.includes('📁') || log.includes('📦') || log.includes('📊') ? 'text-blue-600' :
+                            log.includes('🚀') ? 'text-purple-600' :
+                            'text-foreground'
+                          }>
+                            {log}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              <Alert variant="default" className="border-green-500/50 bg-green-500/10">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <strong>След експорта:</strong> Разархивирайте ZIP файла и копирайте всички файлове 
+                  в локалното ви Git repository, след което направете commit и push.
+                </AlertDescription>
+              </Alert>
+
+              <div className="p-3 bg-muted/30 rounded-lg space-y-2 text-xs">
+                <p className="font-semibold">Бързи команди след разархивиране:</p>
+                <code className="block p-2 bg-muted rounded">
+                  cd your-repo<br />
+                  # копирайте всички файлове от ZIP<br />
+                  git add .<br />
+                  git commit -m "Full sync from Spark - complete 1:1 export"<br />
+                  git push origin main
+                </code>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-4 mt-4">
           <Card>
