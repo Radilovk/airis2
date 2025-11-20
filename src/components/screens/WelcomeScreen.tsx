@@ -16,20 +16,26 @@ interface WelcomeScreenProps {
 }
 
 export default function WelcomeScreen({ onStart, onViewHistory, onAdmin, onTestStart, onAbout, onDiagnostics }: WelcomeScreenProps) {
-  const [isOwner, setIsOwner] = useState(false)
+  const [isOwner, setIsOwner] = useState(true) // Always true for standalone deployment
   const [questionnaireData] = useKV<QuestionnaireData | null>('questionnaire-data', null)
 
   useEffect(() => {
-    checkOwnership()
+    // Check if running in Spark environment
+    if (typeof window !== 'undefined' && (window as any).spark?.user) {
+      checkOwnership()
+    } else {
+      // Standalone deployment - enable all features
+      setIsOwner(true)
+    }
   }, [])
 
   const checkOwnership = async () => {
     try {
-      const user = await window.spark.user()
-      setIsOwner(user?.isOwner || false)
+      const user = await (window as any).spark.user()
+      setIsOwner(user?.isOwner || true)
     } catch (error) {
       console.error('Error checking ownership:', error)
-      setIsOwner(false)
+      setIsOwner(true) // Default to true on error
     }
   }
   const features = [
