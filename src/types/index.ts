@@ -170,6 +170,18 @@ export interface AIPromptTemplate {
   lastModified: string
 }
 
+export interface AIModelStrategy {
+  manualWeight: number
+  promptWeight: number
+  llmKnowledgeWeight: number
+  webSearchWeight: number
+  useWebSearch: boolean
+  temperature: number
+  maxTokens: number
+  topP: number
+  lastModified: string
+}
+
 export interface ReportModuleComment {
   id: string
   moduleId: string
