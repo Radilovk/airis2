@@ -1,7 +1,7 @@
 import { ComponentType, useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/useKV'
 import { cn } from '@/lib/utils'
 import CardEditorToolbar, { CardEditorState } from './CardEditorToolbar'
 import type { EditorModeConfig } from '@/types'

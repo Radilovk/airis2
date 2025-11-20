@@ -26,7 +26,7 @@ import PlanTabEditable from '@/components/report/tabs/PlanTabEditable'
 import ReportEditorMode from '@/components/report/ReportEditorMode'
 import EditorSidebar from '@/components/report/EditorSidebar'
 import { ErrorBoundary } from 'react-error-boundary'
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/useKV'
 import { Card } from '@/components/ui/card'
 
 interface ReportScreenProps {

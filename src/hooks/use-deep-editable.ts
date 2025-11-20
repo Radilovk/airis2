@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/useKV'
 import { DeepEditableState, DeepEditableComment } from '@/components/report/DeepEditableWrapper'
 import { toast } from 'sonner'
 

@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Eye, Sparkle, Activity, FileText, ClockClockwise, Gear, Flask, Info, Bug } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/useKV'
 import type { QuestionnaireData } from '@/types'
 
 interface WelcomeScreenProps {

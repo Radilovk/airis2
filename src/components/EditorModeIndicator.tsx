@@ -1,4 +1,4 @@
-import { useKV } from '@github/spark/hooks'
+import { useKV } from '@/hooks/useKV'
 import { Badge } from '@/components/ui/badge'
 import { PencilSimple } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
