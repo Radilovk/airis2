@@ -71,7 +71,21 @@ function App() {
     setCurrentScreen('history')
   }
 
-  const handleAdminAccess = () => {
+  const handleAdminAccess = async () => {
+    // Check if running in Spark environment with permissions
+    if (typeof window !== 'undefined' && (window as any).spark?.user) {
+      try {
+        const user = await (window as any).spark.user()
+        if (!user?.isOwner) {
+          toast.error('Нямате достъп до настройки. Само собственикът може да влиза в админ панела.')
+          return
+        }
+      } catch (error) {
+        console.error('Error checking ownership:', error)
+        // In case of error, allow access (standalone mode)
+      }
+    }
+    // Standalone or owner - allow access
     setCurrentScreen('admin')
   }
 
@@ -79,7 +93,21 @@ function App() {
     setCurrentScreen('about')
   }
 
-  const handleDiagnosticsAccess = () => {
+  const handleDiagnosticsAccess = async () => {
+    // Check if running in Spark environment with permissions
+    if (typeof window !== 'undefined' && (window as any).spark?.user) {
+      try {
+        const user = await (window as any).spark.user()
+        if (!user?.isOwner) {
+          toast.error('Нямате достъп до диагностика. Само собственикът може да влиза в диагностичния панел.')
+          return
+        }
+      } catch (error) {
+        console.error('Error checking ownership:', error)
+        // In case of error, allow access (standalone mode)
+      }
+    }
+    // Standalone or owner - allow access
     setCurrentScreen('diagnostics')
   }
 
